@@ -21,6 +21,15 @@
   padding: 32px 24px;
 }
 
+.logo {
+  display: block;
+  max-width: 360px;
+  width: 100%;
+  height: auto;
+  margin: 0 auto 16px;
+  border-radius: 12px;
+}
+
 .project-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

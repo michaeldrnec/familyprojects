@@ -4,7 +4,11 @@ import { projects } from './projects'
 function Home() {
   return (
     <div>
-      <h1>Projects</h1>
+      <img
+        src="/drnec_projects_logo.png"
+        alt="Drnec Family A.I. Projects"
+        className="logo"
+      />
       <p>A collection of small games and tools.</p>
       <div className="project-grid">
         {projects.map((p) => (
