@@ -1,0 +1,86 @@
+.letter-ladder .ladder {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 24px 0;
+}
+
+.letter-ladder .rung {
+  display: flex;
+  gap: 6px;
+}
+
+.letter-ladder .rung.target {
+  opacity: 0.5;
+}
+
+.letter-ladder .letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 20px;
+  color: var(--text-h);
+  background: var(--bg-alt);
+}
+
+.letter-ladder .guess-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.letter-ladder .guess-form input {
+  flex: 1 1 200px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 16px;
+  text-transform: uppercase;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.letter-ladder .guess-form button {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.letter-ladder .guess-form button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.letter-ladder .error {
+  color: var(--bad);
+  margin-top: 12px;
+}
+
+.letter-ladder .win {
+  color: var(--good);
+  background: var(--good-bg);
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.letter-ladder .win button {
+  padding: 8px 16px;
+  border: 1px solid var(--good);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--good);
+  cursor: pointer;
+}
