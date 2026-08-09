@@ -1,0 +1,268 @@
+.sentence-spin .board {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+
+.sentence-spin .boxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.sentence-spin .box {
+  min-width: 90px;
+  height: 44px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-h);
+  background: var(--bg-alt);
+  cursor: default;
+}
+
+.sentence-spin .box.filled {
+  border-color: var(--good);
+  color: var(--good);
+  background: var(--good-bg);
+}
+
+.sentence-spin .box.active {
+  border-color: var(--accent);
+  border-style: dashed;
+}
+
+.sentence-spin .box.removable {
+  cursor: pointer;
+}
+
+.sentence-spin .box.removable:hover {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+.sentence-spin .check-button {
+  display: block;
+  padding: 8px 20px;
+  margin: 4px 0 12px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sentence-spin .theme-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--accent-bg);
+  flex: 0 0 auto;
+}
+
+.sentence-spin .theme-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  opacity: 0.8;
+}
+
+.sentence-spin .theme-name {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.sentence-spin .guess-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+
+.sentence-spin .current-letter {
+  font-family: var(--mono);
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.sentence-spin .guess-form input {
+  flex: 1 1 240px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 16px;
+  text-transform: uppercase;
+  background: var(--bg);
+  color: var(--text-h);
+}
+
+.sentence-spin .guess-form button,
+.sentence-spin .new-game {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.sentence-spin .ideas {
+  color: var(--text-h);
+  opacity: 0.65;
+  font-size: 13px;
+  margin: -8px 0 12px;
+}
+
+.sentence-spin .error {
+  color: var(--bad);
+  margin: 4px 0 12px;
+}
+
+.sentence-spin .powerups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+
+.sentence-spin .powerups button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-alt);
+  color: var(--text-h);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.sentence-spin .powerups button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.sentence-spin .powerups button.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.sentence-spin .win {
+  color: var(--good);
+  background: var(--good-bg);
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.sentence-spin .win button {
+  padding: 8px 16px;
+  border: 1px solid var(--good);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--good);
+  cursor: pointer;
+}
+
+.sentence-spin .wheel-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  margin: 32px 0 16px;
+}
+
+.sentence-spin .pointer {
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-top: 16px solid var(--accent);
+  margin-bottom: -4px;
+}
+
+.sentence-spin .wheel-outer {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  background: var(--bg-alt);
+  overflow: hidden;
+}
+
+.sentence-spin .wheel {
+  position: absolute;
+  inset: 0;
+  transition: transform 3.5s cubic-bezier(0.17, 0.87, 0.28, 1);
+  background: repeating-conic-gradient(
+    var(--bg-alt) 0deg calc(360deg / 26),
+    var(--bg) calc(360deg / 26) calc(360deg / 13)
+  );
+}
+
+.sentence-spin .wheel-slot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+}
+
+.sentence-spin .wheel-letter {
+  position: absolute;
+  left: 0;
+  top: -108px;
+  transform: translate(-50%, -50%);
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--text-h);
+}
+
+.sentence-spin .wheel-letter.used {
+  color: var(--border);
+  opacity: 0.4;
+}
+
+.sentence-spin .wheel-letter.reusable {
+  cursor: pointer;
+  color: var(--accent);
+  opacity: 0.9;
+}
+
+.sentence-spin .spin-button {
+  padding: 10px 28px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sentence-spin .spin-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}

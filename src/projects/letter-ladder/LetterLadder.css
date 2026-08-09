@@ -1,3 +1,52 @@
+.letter-ladder .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.letter-ladder .banner {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  border-radius: 12px;
+  margin: 0 auto 20px;
+}
+
+.letter-ladder .length-select {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.letter-ladder .length-select button {
+  padding: 6px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-alt);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.letter-ladder .length-select button.active {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.letter-ladder .steps-remaining {
+  color: var(--text-h);
+  opacity: 0.75;
+  font-size: 14px;
+  margin: 4px 0 12px;
+}
+
 .letter-ladder .ladder {
   display: flex;
   flex-direction: column;
@@ -64,6 +113,12 @@
 .letter-ladder .error {
   color: var(--bad);
   margin-top: 12px;
+}
+
+.letter-ladder .hint {
+  color: var(--accent);
+  margin-top: 12px;
+  font-style: italic;
 }
 
 .letter-ladder .win {

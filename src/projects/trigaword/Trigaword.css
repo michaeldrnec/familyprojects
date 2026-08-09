@@ -1,0 +1,119 @@
+.trigaword .pyramid {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 24px 0;
+}
+
+.trigaword .pyramid-row {
+  display: flex;
+  gap: 6px;
+}
+
+.trigaword .cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-h);
+  background: var(--bg-alt);
+  cursor: pointer;
+  padding: 0;
+}
+
+.trigaword .cell:disabled {
+  cursor: default;
+}
+
+.trigaword .cell.given {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.trigaword .cell.locked {
+  background: var(--good-bg);
+  color: var(--good);
+  border-color: var(--good);
+}
+
+.trigaword .cell.wrong {
+  border-color: var(--bad);
+}
+
+.trigaword .pool {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  margin: 20px 0;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.trigaword .tile {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--text-h);
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.trigaword .tile.selected {
+  background: var(--accent-bg);
+  color: var(--accent);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.trigaword .controls {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.trigaword .controls button {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.trigaword .win {
+  color: var(--good);
+  background: var(--good-bg);
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.trigaword .win button {
+  padding: 8px 16px;
+  border: 1px solid var(--good);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--good);
+  cursor: pointer;
+}
