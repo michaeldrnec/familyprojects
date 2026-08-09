@@ -163,7 +163,12 @@ function SentenceSpin() {
 
   return (
     <div className="sentence-spin">
-      <h1>Sentence Spin</h1>
+      <h1 className="sr-only">Sentence Spin</h1>
+      <img
+        src="/sentence_spin_logo.png"
+        alt="Sentence Spin"
+        className="banner"
+      />
       <p>
         Spin the wheel for a letter, then type any word that starts with it —
         any real word works, but at least one word in your finished sentence

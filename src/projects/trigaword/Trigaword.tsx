@@ -106,7 +106,12 @@ function Trigaword() {
 
   return (
     <div className="trigaword">
-      <h1>Trigaword</h1>
+      <h1 className="sr-only">Trigaword</h1>
+      <img
+        src="/trigaword_logo.png"
+        alt="Trigaword — The Pyramid Puzzle Challenge"
+        className="banner"
+      />
       <p>
         Fill in every blank using the letters below. Each row is its own word;
         the first letter is already given. Click a letter, then click a blank
