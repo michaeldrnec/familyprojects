@@ -20,4 +20,9 @@ export const projects: Project[] = [
     title: 'Sentence Spin',
     description: 'Spin the wheel for a letter and build a themed sentence, 7 words or more.',
   },
+  {
+    slug: 'flashigana',
+    title: 'Flashigana',
+    description: 'Hiragana flashcards — pick the right romaji reading for each character.',
+  },
 ]

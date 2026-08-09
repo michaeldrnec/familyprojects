@@ -1,0 +1,131 @@
+.flashigana .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.flashigana .banner {
+  display: block;
+  width: 100%;
+  max-width: 720px;
+  height: auto;
+  border-radius: 12px;
+  margin: 0 auto 12px;
+}
+
+.flashigana .progress {
+  color: var(--text-h);
+  opacity: 0.7;
+  font-size: 14px;
+  margin: 16px 0 8px;
+}
+
+.flashigana .card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 180px;
+  height: 180px;
+  margin: 8px auto 24px;
+  border: 2px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-alt);
+  font-size: 96px;
+  color: var(--text-h);
+}
+
+.flashigana .choices {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.flashigana .choice {
+  min-width: 100px;
+  padding: 14px 20px;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-alt);
+  color: var(--text-h);
+  font-family: var(--mono);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.flashigana .choice:disabled {
+  cursor: default;
+}
+
+.flashigana .choice.correct {
+  border-color: var(--good);
+  color: var(--good);
+  background: var(--good-bg);
+}
+
+.flashigana .choice.wrong {
+  border-color: var(--bad);
+  color: var(--bad);
+  background: var(--bad-bg);
+}
+
+.flashigana .feedback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.flashigana .feedback.good {
+  color: var(--good);
+  background: var(--good-bg);
+}
+
+.flashigana .feedback.bad {
+  color: var(--bad);
+  background: var(--bad-bg);
+}
+
+.flashigana .feedback button {
+  padding: 8px 16px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.flashigana .results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 32px;
+}
+
+.flashigana .results .score {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.flashigana .results button {
+  padding: 10px 24px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  font-weight: 700;
+  cursor: pointer;
+}
