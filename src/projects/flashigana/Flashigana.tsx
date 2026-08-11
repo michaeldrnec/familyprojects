@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import { HIRAGANA, type Kana } from './hiragana'
 import './Flashigana.css'
 
-const ADVANCE_DELAY_MS = 3000
+const REVIEW_ADVANCE_DELAY_MS = 3000
+const CORRECT_ADVANCE_DELAY_MS = 1000
+const WRONG_ADVANCE_DELAY_MS = 5000
 const ROUND_SIZES = [15, 30, 46] as const
 type RoundSize = (typeof ROUND_SIZES)[number]
 type Mode = 'quiz' | 'review'
@@ -75,6 +77,13 @@ function Flashigana() {
   const card = round && !finished ? round.deck[round.index] : null
   const answered = round?.mode === 'quiz' ? selected !== null : true
 
+  const advanceDelay =
+    round?.mode === 'quiz'
+      ? selected === card?.romaji
+        ? CORRECT_ADVANCE_DELAY_MS
+        : WRONG_ADVANCE_DELAY_MS
+      : REVIEW_ADVANCE_DELAY_MS
+
   function begin() {
     setRound(newRound(mode, roundSize))
     setSelected(null)
@@ -126,13 +135,15 @@ function Flashigana() {
 
   // Auto-advance: once a card is "answered" (review mode is always
   // considered answered; quiz mode once a choice is picked), move on
-  // automatically after a few seconds instead of requiring a click.
+  // automatically instead of requiring a click. Wrong answers linger
+  // longer (5s) so there's time to read the correction; correct answers
+  // move on quickly (1s); review mode uses a fixed pace (3s).
   useEffect(() => {
     if (!round || finished || !answered) return
-    const timer = setTimeout(next, ADVANCE_DELAY_MS)
+    const timer = setTimeout(next, advanceDelay)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [round?.index, answered, finished])
+  }, [round?.index, answered, finished, advanceDelay])
 
   if (!round) {
     return (
@@ -264,7 +275,10 @@ function Flashigana() {
                   ? '🎉 Correct!'
                   : `Not quite — "${card!.char}" is "${card!.romaji}".`}
               <span className="advance-bar" key={round.index}>
-                <span className="advance-bar-fill" />
+                <span
+                  className="advance-bar-fill"
+                  style={{ animationDuration: `${advanceDelay}ms` }}
+                />
               </span>
             </div>
           )}
