@@ -5,6 +5,7 @@ import Home from './Home'
 import LetterLadder from './projects/letter-ladder/LetterLadder'
 import Trigaword from './projects/trigaword/Trigaword'
 import Flashigana from './projects/flashigana/Flashigana'
+import Rainglow from './projects/rainglow/Rainglow'
 
 // Sentence Spin bundles a full ~370k-word dictionary (for free-form word
 // validation) that would otherwise bloat every route's initial load, so
@@ -19,6 +20,7 @@ function App() {
         <Route path="/letter-ladder" element={<LetterLadder />} />
         <Route path="/trigaword" element={<Trigaword />} />
         <Route path="/flashigana" element={<Flashigana />} />
+        <Route path="/rainglow" element={<Rainglow />} />
         <Route
           path="/sentence-spin"
           element={

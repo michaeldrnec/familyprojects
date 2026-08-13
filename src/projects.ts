@@ -25,4 +25,9 @@ export const projects: Project[] = [
     title: 'Flashigana',
     description: 'Hiragana flashcards — pick the right romaji reading for each character.',
   },
+  {
+    slug: 'rainglow',
+    title: 'Rainglow',
+    description: 'Mix colored lenses to match the target color — 10 levels, N lenses for level N.',
+  },
 ]
