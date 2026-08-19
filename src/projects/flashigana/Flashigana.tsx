@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
 import { HIRAGANA, type Kana } from './hiragana'
+import { WORDS, type JapaneseWord } from './words'
 import './Flashigana.css'
 
 const REVIEW_ADVANCE_DELAY_MS = 3000
 const CORRECT_ADVANCE_DELAY_MS = 1000
 const WRONG_ADVANCE_DELAY_MS = 5000
-const ROUND_SIZES = [15, 30, 46] as const
-type RoundSize = (typeof ROUND_SIZES)[number]
-type Mode = 'quiz' | 'review'
+const QUIZ_ROUND_SIZES = [15, 30, 46] as const
+const WORD_ROUND_SIZES = [15, 30] as const
+const MAX_TILES = 10
+type RoundSize = 15 | 30 | 46
+type Mode = 'quiz' | 'review' | 'words'
 
 const PRAISE = ["You're on fire! 🔥", 'Great streak! 🌟', "Keep it up, you're crushing it!"]
 const ENCOURAGEMENT = [
@@ -49,16 +52,56 @@ function buildChoices(card: Kana): string[] {
   return shuffle([card.romaji, ...distractors])
 }
 
-interface Round {
-  mode: Mode
+interface Tile {
+  id: string
+  char: string
+}
+
+let tileId = 0
+
+function buildTiles(word: JapaneseWord): { tray: Tile[]; filled: (Tile | null)[] } {
+  const required = Array.from(word.hiragana)
+  const distractorPool = HIRAGANA.map((k) => k.char).filter((c) => !required.includes(c))
+  const distractorCount = Math.max(0, MAX_TILES - required.length)
+  const distractors = shuffle(distractorPool).slice(0, distractorCount)
+  const tray = shuffle([...required, ...distractors]).map((char) => ({
+    id: `t${tileId++}`,
+    char,
+  }))
+  return { tray, filled: new Array(required.length).fill(null) }
+}
+
+interface QuizRound {
+  mode: 'quiz'
   deck: Kana[]
   index: number
   choices: string[]
 }
+interface ReviewRound {
+  mode: 'review'
+  deck: Kana[]
+  index: number
+}
+interface WordsRound {
+  mode: 'words'
+  deck: JapaneseWord[]
+  index: number
+  tray: Tile[]
+  filled: (Tile | null)[]
+}
+type Round = QuizRound | ReviewRound | WordsRound
 
 function newRound(mode: Mode, size: RoundSize): Round {
+  if (mode === 'words') {
+    const deck = shuffle(WORDS).slice(0, size)
+    const { tray, filled } = buildTiles(deck[0])
+    return { mode, deck, index: 0, tray, filled }
+  }
   const deck = shuffle(HIRAGANA).slice(0, size)
-  return { mode, deck, index: 0, choices: buildChoices(deck[0]) }
+  if (mode === 'quiz') {
+    return { mode, deck, index: 0, choices: buildChoices(deck[0]) }
+  }
+  return { mode, deck, index: 0 }
 }
 
 function Flashigana() {
@@ -74,15 +117,35 @@ function Flashigana() {
 
   const total = round?.deck.length ?? 0
   const finished = round !== null && round.index >= total
-  const card = round && !finished ? round.deck[round.index] : null
-  const answered = round?.mode === 'quiz' ? selected !== null : true
+  const kana = round && !finished && round.mode !== 'words' ? round.deck[round.index] : null
+  const word = round && !finished && round.mode === 'words' ? round.deck[round.index] : null
+
+  const answered =
+    round?.mode === 'quiz'
+      ? selected !== null
+      : round?.mode === 'words'
+        ? round.filled.every((t) => t !== null)
+        : true
+
+  const wordAttempt =
+    round?.mode === 'words' && answered ? round.filled.map((t) => t!.char).join('') : null
+  const wordCorrect = wordAttempt !== null && wordAttempt === word?.hiragana
+
+  const isCorrectNow =
+    round?.mode === 'quiz' ? selected === kana?.romaji : round?.mode === 'words' ? wordCorrect : true
 
   const advanceDelay =
-    round?.mode === 'quiz'
-      ? selected === card?.romaji
-        ? CORRECT_ADVANCE_DELAY_MS
-        : WRONG_ADVANCE_DELAY_MS
-      : REVIEW_ADVANCE_DELAY_MS
+    round?.mode === 'review' ? REVIEW_ADVANCE_DELAY_MS : isCorrectNow ? CORRECT_ADVANCE_DELAY_MS : WRONG_ADVANCE_DELAY_MS
+
+  function availableSizes(m: Mode): readonly RoundSize[] {
+    return m === 'words' ? WORD_ROUND_SIZES : QUIZ_ROUND_SIZES
+  }
+
+  function selectMode(m: Mode) {
+    setMode(m)
+    const sizes = availableSizes(m)
+    if (!sizes.includes(roundSize)) setRoundSize(sizes[0])
+  }
 
   function begin() {
     setRound(newRound(mode, roundSize))
@@ -94,11 +157,7 @@ function Flashigana() {
     setStreakMessage('')
   }
 
-  function choose(romaji: string) {
-    if (!round || round.mode !== 'quiz' || selected !== null || finished) return
-    setSelected(romaji)
-
-    const isCorrect = romaji === card!.romaji
+  function recordAnswer(isCorrect: boolean) {
     if (isCorrect) {
       setCorrectCount((n) => n + 1)
       setWrongStreak(0)
@@ -118,12 +177,52 @@ function Flashigana() {
     }
   }
 
+  function choose(romaji: string) {
+    if (!round || round.mode !== 'quiz' || selected !== null || finished) return
+    setSelected(romaji)
+    recordAnswer(romaji === kana!.romaji)
+  }
+
+  function placeTile(id: string) {
+    if (!round || round.mode !== 'words' || answered) return
+    const tile = round.tray.find((t) => t.id === id)
+    if (!tile) return
+    const nextEmpty = round.filled.findIndex((t) => t === null)
+    if (nextEmpty === -1) return
+
+    const newFilled = [...round.filled]
+    newFilled[nextEmpty] = tile
+    const newTray = round.tray.filter((t) => t.id !== id)
+    setRound({ ...round, tray: newTray, filled: newFilled })
+
+    if (newFilled.every((t) => t !== null)) {
+      const attempt = newFilled.map((t) => t!.char).join('')
+      recordAnswer(attempt === round.deck[round.index].hiragana)
+    }
+  }
+
+  function removeTile(index: number) {
+    if (!round || round.mode !== 'words' || answered) return
+    const tile = round.filled[index]
+    if (!tile) return
+    const newFilled = [...round.filled]
+    newFilled[index] = null
+    setRound({ ...round, tray: [...round.tray, tile], filled: newFilled })
+  }
+
   function next() {
     setRound((r) => {
       if (!r) return r
       const nextIndex = r.index + 1
       if (nextIndex >= r.deck.length) return { ...r, index: nextIndex }
-      return { ...r, index: nextIndex, choices: buildChoices(r.deck[nextIndex]) }
+      if (r.mode === 'quiz') {
+        return { ...r, index: nextIndex, choices: buildChoices(r.deck[nextIndex]) }
+      }
+      if (r.mode === 'words') {
+        const { tray, filled } = buildTiles(r.deck[nextIndex])
+        return { ...r, index: nextIndex, tray, filled }
+      }
+      return { ...r, index: nextIndex }
     })
     setSelected(null)
     setStreakMessage('')
@@ -134,10 +233,11 @@ function Flashigana() {
   }
 
   // Auto-advance: once a card is "answered" (review mode is always
-  // considered answered; quiz mode once a choice is picked), move on
-  // automatically instead of requiring a click. Wrong answers linger
-  // longer (5s) so there's time to read the correction; correct answers
-  // move on quickly (1s); review mode uses a fixed pace (3s).
+  // considered answered; quiz mode once a choice is picked; words mode
+  // once every tile blank is filled), move on automatically instead of
+  // requiring a click. Wrong answers linger longer (5s) so there's time
+  // to read the correction; correct answers move on quickly (1s); review
+  // mode uses a fixed pace (3s).
   useEffect(() => {
     if (!round || finished || !answered) return
     const timer = setTimeout(next, advanceDelay)
@@ -154,7 +254,7 @@ function Flashigana() {
           alt="Flashigana — Hiragana Flashcard Game"
           className="banner"
         />
-        <p>Pick the correct romaji reading for each hiragana character.</p>
+        <p>Choose a mode and round length to begin.</p>
 
         <div className="setup">
           <div className="setup-group">
@@ -163,16 +263,23 @@ function Flashigana() {
               <button
                 type="button"
                 className={mode === 'quiz' ? 'active' : ''}
-                onClick={() => setMode('quiz')}
+                onClick={() => selectMode('quiz')}
               >
                 Quiz
               </button>
               <button
                 type="button"
                 className={mode === 'review' ? 'active' : ''}
-                onClick={() => setMode('review')}
+                onClick={() => selectMode('review')}
               >
                 Review Only
+              </button>
+              <button
+                type="button"
+                className={mode === 'words' ? 'active' : ''}
+                onClick={() => selectMode('words')}
+              >
+                Words
               </button>
             </div>
           </div>
@@ -180,7 +287,7 @@ function Flashigana() {
           <div className="setup-group">
             <span className="setup-label">Round length</span>
             <div className="setup-options">
-              {ROUND_SIZES.map((size) => (
+              {availableSizes(mode).map((size) => (
                 <button
                   key={size}
                   type="button"
@@ -210,14 +317,14 @@ function Flashigana() {
         className="banner"
       />
       <p>
-        {round.mode === 'quiz'
-          ? 'Pick the correct romaji reading for each hiragana character.'
-          : 'Review mode — study each character and its reading.'}
+        {round.mode === 'quiz' && 'Pick the correct romaji reading for each hiragana character.'}
+        {round.mode === 'review' && 'Review mode — study each character and its reading.'}
+        {round.mode === 'words' && 'Words mode — spell each word in hiragana using the tiles below.'}
       </p>
 
       {finished ? (
         <div className="results">
-          {round.mode === 'quiz' ? (
+          {round.mode !== 'review' ? (
             <>
               <p className="score">
                 {correctCount} / {total} correct ({Math.round((correctCount / total) * 100)}%)
@@ -236,44 +343,98 @@ function Flashigana() {
         <>
           <p className="progress">
             Card {round.index + 1} of {total}
-            {round.mode === 'quiz' && ` — ${correctCount} correct so far`}
+            {round.mode !== 'review' && ` — ${correctCount} correct so far`}
           </p>
 
-          <div className="card">{card!.char}</div>
+          {round.mode === 'words' ? (
+            <>
+              <div className="word-prompt">
+                <span className="word-romaji">{word!.romaji}</span>
+                <span className="word-english">({word!.english})</span>
+              </div>
 
-          {round.mode === 'review' ? (
-            <div className="reveal">{card!.romaji}</div>
-          ) : (
-            <div className="choices">
-              {round.choices.map((romaji) => {
-                const isCorrect = romaji === card!.romaji
-                const isSelected = romaji === selected
-                const cls =
-                  'choice' +
-                  (answered && isCorrect ? ' correct' : '') +
-                  (answered && isSelected && !isCorrect ? ' wrong' : '')
-                return (
+              <div className="tile-blanks">
+                {round.filled.map((tile, i) => {
+                  const correctChar = word!.hiragana[i]
+                  const cls =
+                    'tile-blank' +
+                    (tile ? ' filled' : '') +
+                    (answered && tile
+                      ? tile.char === correctChar
+                        ? ' correct'
+                        : ' wrong'
+                      : '')
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      className={cls}
+                      onClick={() => removeTile(i)}
+                      disabled={!tile || answered}
+                    >
+                      {tile?.char ?? ''}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="tile-tray">
+                {round.tray.map((tile) => (
                   <button
-                    key={romaji}
+                    key={tile.id}
                     type="button"
-                    className={cls}
-                    onClick={() => choose(romaji)}
+                    className="tile"
+                    onClick={() => placeTile(tile.id)}
                     disabled={answered}
                   >
-                    {romaji}
+                    {tile.char}
                   </button>
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="card">{kana!.char}</div>
+
+              {round.mode === 'review' ? (
+                <div className="reveal">{kana!.romaji}</div>
+              ) : (
+                <div className="choices">
+                  {round.choices.map((romaji) => {
+                    const isCorrect = romaji === kana!.romaji
+                    const isSelected = romaji === selected
+                    const cls =
+                      'choice' +
+                      (answered && isCorrect ? ' correct' : '') +
+                      (answered && isSelected && !isCorrect ? ' wrong' : '')
+                    return (
+                      <button
+                        key={romaji}
+                        type="button"
+                        className={cls}
+                        onClick={() => choose(romaji)}
+                        disabled={answered}
+                      >
+                        {romaji}
+                      </button>
+                    )
+                  })}
+                </div>
+              )}
+            </>
           )}
 
           {answered && (
-            <div className={round.mode === 'quiz' && selected !== card!.romaji ? 'feedback bad' : 'feedback good'}>
-              {round.mode === 'review'
-                ? `"${card!.char}" is "${card!.romaji}"`
-                : selected === card!.romaji
+            <div className={round.mode !== 'review' && !isCorrectNow ? 'feedback bad' : 'feedback good'}>
+              {round.mode === 'review' && `"${kana!.char}" is "${kana!.romaji}"`}
+              {round.mode === 'quiz' &&
+                (isCorrectNow
                   ? '🎉 Correct!'
-                  : `Not quite — "${card!.char}" is "${card!.romaji}".`}
+                  : `Not quite — "${kana!.char}" is "${kana!.romaji}".`)}
+              {round.mode === 'words' &&
+                (isCorrectNow
+                  ? '🎉 Correct!'
+                  : `Not quite — "${word!.romaji}" (${word!.english}) is spelled "${word!.hiragana}".`)}
               <span className="advance-bar" key={round.index}>
                 <span
                   className="advance-bar-fill"

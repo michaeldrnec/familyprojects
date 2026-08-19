@@ -134,6 +134,99 @@
   }
 }
 
+.flashigana .word-prompt {
+  text-align: center;
+  margin: 16px 0 24px;
+}
+
+.flashigana .word-romaji {
+  font-family: var(--mono);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--text-h);
+}
+
+.flashigana .word-english {
+  display: block;
+  font-size: 16px;
+  color: var(--text-h);
+  opacity: 0.7;
+  margin-top: 4px;
+}
+
+.flashigana .tile-blanks {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.flashigana .tile-blank {
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-alt);
+  color: var(--text-h);
+  font-size: 22px;
+  font-weight: 700;
+  cursor: default;
+}
+
+.flashigana .tile-blank.filled {
+  cursor: pointer;
+  border-color: var(--accent);
+}
+
+.flashigana .tile-blank.correct {
+  border-color: var(--good);
+  color: var(--good);
+  background: var(--good-bg);
+  cursor: default;
+}
+
+.flashigana .tile-blank.wrong {
+  border-color: var(--bad);
+  color: var(--bad);
+  background: var(--bad-bg);
+  cursor: default;
+}
+
+.flashigana .tile-tray {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 16px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.flashigana .tile {
+  width: 40px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.flashigana .tile:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .flashigana .streak-message {
   text-align: center;
   color: var(--accent);
