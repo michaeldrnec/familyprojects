@@ -30,4 +30,9 @@ export const projects: Project[] = [
     title: 'Rainglow',
     description: 'Mix colored lenses to match the target color — 10 levels, N lenses for level N.',
   },
+  {
+    slug: 'lexicon',
+    title: 'LexiCon',
+    description: 'Multiple-choice trivia — pick a round length and see how many you get right.',
+  },
 ]
