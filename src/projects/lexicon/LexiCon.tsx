@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { QUESTIONS, type Question } from './questions'
+import Confetti from './Confetti'
 import './LexiCon.css'
+
+const CONFETTI_THRESHOLD = 80
 
 const ROUND_LENGTHS = [5, 10, 20] as const
 type RoundLength = (typeof ROUND_LENGTHS)[number]
@@ -34,6 +37,7 @@ function LexiCon() {
   const total = round?.deck.length ?? 0
   const finished = round !== null && round.index >= total
   const question = round && !finished ? round.deck[round.index] : null
+  const percent = total > 0 ? Math.round((correctCount / total) * 100) : 0
   const answered = selected !== null
 
   function begin() {
@@ -102,8 +106,9 @@ function LexiCon() {
 
       {finished ? (
         <div className="results">
+          {percent >= CONFETTI_THRESHOLD && <Confetti />}
           <p className="score">
-            {correctCount} / {total} correct ({Math.round((correctCount / total) * 100)}%)
+            {correctCount} / {total} correct ({percent}%)
           </p>
           <button type="button" onClick={restart}>Play Again</button>
         </div>
