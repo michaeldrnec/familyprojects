@@ -35,4 +35,9 @@ export const projects: Project[] = [
     title: 'LexiCon',
     description: 'Multiple-choice trivia — pick a round length and see how many you get right.',
   },
+  {
+    slug: 'gravity-well',
+    title: 'Gravity Well',
+    description: 'Aim your rocket home to Earth, bending its path around asteroids, planets, and stars.',
+  },
 ]

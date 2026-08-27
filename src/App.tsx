@@ -7,6 +7,7 @@ import Trigaword from './projects/trigaword/Trigaword'
 import Flashigana from './projects/flashigana/Flashigana'
 import Rainglow from './projects/rainglow/Rainglow'
 import LexiCon from './projects/lexicon/LexiCon'
+import GravityWell from './projects/gravity-well/GravityWell'
 
 // Sentence Spin bundles a full ~370k-word dictionary (for free-form word
 // validation) that would otherwise bloat every route's initial load, so
@@ -23,6 +24,7 @@ function App() {
         <Route path="/flashigana" element={<Flashigana />} />
         <Route path="/rainglow" element={<Rainglow />} />
         <Route path="/lexicon" element={<LexiCon />} />
+        <Route path="/gravity-well" element={<GravityWell />} />
         <Route
           path="/sentence-spin"
           element={
