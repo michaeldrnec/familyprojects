@@ -5,7 +5,7 @@ function Home() {
   return (
     <div>
       <img
-        src="/drnec_projects_logo.png"
+        src="/drnec_projects_logo.jpg"
         alt="Drnec Family A.I. Projects"
         className="logo"
       />

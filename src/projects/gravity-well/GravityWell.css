@@ -1,56 +1,39 @@
 /* The game fills the viewport below the site header instead of sitting in
  * the normal, width-capped article column -- see the `:has()` override in
- * App.css that widens `.site-main` for this page. Everything here (topbar,
- * progress line, controls) keeps its natural height; `.game-area` is the
- * one flexible region that soaks up whatever space is left, so the canvas
- * is always fully visible without scrolling the page. */
+ * App.css that widens `.site-main` for this page. The game's own title/logo
+ * now lives in the site header (Layout.tsx), so this page starts straight
+ * at the progress line. Everything here keeps its natural height except
+ * `.game-area`, the one flexible region that soaks up whatever space is
+ * left, so the canvas is always fully visible without scrolling the page. */
 .gravity-well.fullscreen {
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  gap: 6px;
-  padding: 10px 20px;
+  gap: 2px;
+  padding: 6px 20px 10px;
 }
 
-.gravity-well .gw-topbar {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-shrink: 0;
-}
-
-.gravity-well .banner {
-  display: block;
-  height: 48px;
-  width: auto;
-  border-radius: 8px;
-  flex-shrink: 0;
-}
-
-.gravity-well .gw-topbar-text h1 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.gravity-well .gw-topbar-text p {
-  margin: 2px 0 0;
-  font-size: 13px;
-  opacity: 0.75;
-}
-
+/* Sized (via canvasWidth, tracked with a ResizeObserver in the component)
+ * and centered to match the canvas exactly, so the score/level line spans
+ * flush with the canvas's real edges instead of the far edges of the page. */
 .gravity-well .progress {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   color: var(--text-h);
   opacity: 0.7;
   font-size: 14px;
-  margin: 0;
+  margin: 0 auto;
   flex-shrink: 0;
 }
 
+.gravity-well .level-badge {
+  font-size: 13px;
+}
+
 .gravity-well .game-area {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: flex;
@@ -123,6 +106,30 @@
   color: var(--good);
   background: var(--good-bg);
   flex-shrink: 0;
+}
+
+/* Floats over the canvas instead of sitting below it as a sibling, so
+ * winning/crashing never changes how much space the canvas itself gets --
+ * see the comment at the JSX call site for the full "why". */
+.gravity-well .win.overlay,
+.gravity-well .feedback.overlay {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  margin: 0 auto;
+  z-index: 2;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+.gravity-well .win.overlay {
+  background: rgba(6, 16, 10, 0.94);
+  border: 1px solid var(--good);
+}
+
+.gravity-well .feedback.overlay {
+  background: rgba(20, 6, 6, 0.94);
+  border: 1px solid var(--bad);
 }
 
 .gravity-well .win-buttons {

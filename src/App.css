@@ -7,10 +7,29 @@
 }
 
 .site-header .brand {
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--text-h);
+  display: flex;
+  align-items: center;
   text-decoration: none;
+}
+
+.site-header .brand-logo {
+  display: block;
+  height: 32px;
+  width: auto;
+  border-radius: 6px;
+}
+
+.site-header .header-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border);
+}
+
+.site-header .header-game-logo {
+  display: block;
+  height: 32px;
+  width: auto;
+  border-radius: 6px;
 }
 
 .site-main {

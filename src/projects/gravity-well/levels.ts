@@ -30,10 +30,20 @@ function totalOf(counts: Partial<Record<BodyKind, number>>): number {
   return Object.values(counts).reduce((sum, n) => sum + (n ?? 0), 0)
 }
 
-// Body-count progression across the 20 tiers -- ramps from a single gentle
+// Body-count progression across the 30 tiers -- ramps from a single gentle
 // asteroid up to a dense multi-body gauntlet. minGap shrinks in step so
 // later tiers require genuinely tighter threading, not just more clutter.
-const BODY_PROGRESSION: Array<{ name: string; counts: Partial<Record<BodyKind, number>>; minGap: number }> = [
+// Tiers 1-20 derive their moving-body count from `moversFor` below; tiers
+// 21+ set `moving` explicitly instead -- at tier 20 that formula would
+// already put 4 of a 6-body layout in motion, but level 21 is meant to
+// reset to a calmer "5 stationary, 1 moving" baseline before ramping back
+// up on its own, harder curve through level 30.
+const BODY_PROGRESSION: Array<{
+  name: string
+  counts: Partial<Record<BodyKind, number>>
+  minGap: number
+  moving?: number
+}> = [
   { name: 'First Flight', counts: { asteroid: 1 }, minGap: 110 },
   { name: 'Around the Planet', counts: { planet: 1 }, minGap: 110 },
   { name: 'Pebble Field', counts: { asteroid: 2 }, minGap: 100 },
@@ -54,12 +64,24 @@ const BODY_PROGRESSION: Array<{ name: string; counts: Partial<Record<BodyKind, n
   { name: 'Debris Run', counts: { asteroid: 3, planet: 1, star: 1 }, minGap: 65 },
   { name: 'The Final Approach', counts: { asteroid: 2, planet: 2, star: 1 }, minGap: 65 },
   { name: 'Homecoming', counts: { asteroid: 2, planet: 2, star: 2 }, minGap: 60 },
+  // Levels 21-30: a second, harder campaign -- more bodies overall, with
+  // the moving count ramping back up on its own slower schedule.
+  { name: 'Debris Storm', counts: { asteroid: 3, planet: 2, star: 1 }, minGap: 60, moving: 1 },
+  { name: 'Twin Orbits', counts: { asteroid: 3, planet: 2, star: 1 }, minGap: 58, moving: 2 },
+  { name: 'Crowded Skies', counts: { asteroid: 4, planet: 2, star: 1 }, minGap: 55, moving: 2 },
+  { name: 'Chaos Theory', counts: { asteroid: 4, planet: 2, star: 1 }, minGap: 55, moving: 3 },
+  { name: 'Deep Field', counts: { asteroid: 4, planet: 3, star: 1 }, minGap: 50, moving: 3 },
+  { name: 'Whirling Void', counts: { asteroid: 4, planet: 3, star: 1 }, minGap: 50, moving: 4 },
+  { name: 'The Maelstrom', counts: { asteroid: 5, planet: 3, star: 1 }, minGap: 48, moving: 4 },
+  { name: 'Pandemonium', counts: { asteroid: 5, planet: 3, star: 1 }, minGap: 48, moving: 5 },
+  { name: 'Event Horizon', counts: { asteroid: 5, planet: 3, star: 2 }, minGap: 45, moving: 5 },
+  { name: 'The Impossible Return', counts: { asteroid: 5, planet: 3, star: 2 }, minGap: 45, moving: 6 },
 ]
 
-export const TIERS: TierConfig[] = BODY_PROGRESSION.map(({ name, counts, minGap }, i) => ({
+export const TIERS: TierConfig[] = BODY_PROGRESSION.map(({ name, counts, minGap, moving }, i) => ({
   name,
   bounds: BOUNDS,
   bodyCounts: counts,
   minGap,
-  movingCount: moversFor(i, totalOf(counts)),
+  movingCount: moving ?? moversFor(i, totalOf(counts)),
 }))

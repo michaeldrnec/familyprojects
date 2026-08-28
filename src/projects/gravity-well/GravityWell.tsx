@@ -162,6 +162,99 @@ function drawStar(ctx: CanvasRenderingContext2D, pos: { x: number; y: number; ra
   ctx.shadowBlur = 0
 }
 
+// Earth is the one fixed, always-present body every level shares, so unlike
+// the procedurally varied asteroids/planets/stars it's drawn with a single
+// hand-designed look (oceans, continents, ice caps, clouds) rather than a
+// seeded/randomized one -- it should always be recognizably "home."
+function drawEarth(ctx: CanvasRenderingContext2D, earth: { x: number; y: number; radius: number }) {
+  const { x, y, radius } = earth
+
+  function blob(cx: number, cy: number, scale: number, rot: number) {
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.rotate(rot)
+    ctx.beginPath()
+    ctx.moveTo(-0.5 * scale, 0)
+    ctx.bezierCurveTo(-0.5 * scale, -0.6 * scale, 0.3 * scale, -0.7 * scale, 0.6 * scale, -0.2 * scale)
+    ctx.bezierCurveTo(0.8 * scale, 0.1 * scale, 0.4 * scale, 0.6 * scale, -0.1 * scale, 0.5 * scale)
+    ctx.bezierCurveTo(-0.5 * scale, 0.4 * scale, -0.6 * scale, 0.3 * scale, -0.5 * scale, 0)
+    ctx.closePath()
+    ctx.fill()
+    ctx.restore()
+  }
+
+  // Soft atmospheric glow behind the sphere.
+  ctx.save()
+  ctx.shadowColor = 'rgba(96,165,250,0.65)'
+  ctx.shadowBlur = radius * 0.9
+  ctx.beginPath()
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
+  ctx.fillStyle = '#1b3f73'
+  ctx.fill()
+  ctx.restore()
+
+  // Ocean base, lit from the upper-left like the other bodies.
+  ctx.beginPath()
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
+  const ocean = ctx.createRadialGradient(
+    x - radius * 0.35,
+    y - radius * 0.35,
+    radius * 0.1,
+    x,
+    y,
+    radius * 1.05,
+  )
+  ocean.addColorStop(0, '#8ec9f0')
+  ocean.addColorStop(0.45, '#3d7dc9')
+  ocean.addColorStop(1, '#1b3f73')
+  ctx.fillStyle = ocean
+  ctx.fill()
+
+  // Continents, ice caps, and clouds, clipped to the sphere.
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
+  ctx.clip()
+
+  ctx.fillStyle = '#4b8f3e'
+  blob(x - radius * 0.25, y - radius * 0.15, radius * 0.9, 0.3)
+  blob(x + radius * 0.4, y + radius * 0.25, radius * 0.55, -0.6)
+  blob(x - radius * 0.1, y + radius * 0.55, radius * 0.4, 1.1)
+  ctx.fillStyle = '#3a7030'
+  blob(x - radius * 0.35, y - radius * 0.1, radius * 0.35, 0.9)
+
+  ctx.fillStyle = 'rgba(255,255,255,0.9)'
+  ctx.beginPath()
+  ctx.ellipse(x, y - radius * 0.88, radius * 0.55, radius * 0.25, 0, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.beginPath()
+  ctx.ellipse(x, y + radius * 0.88, radius * 0.5, radius * 0.22, 0, 0, Math.PI * 2)
+  ctx.fill()
+
+  ctx.fillStyle = 'rgba(255,255,255,0.4)'
+  ;[
+    [x + radius * 0.1, y - radius * 0.3, radius * 0.5, radius * 0.14, 0.4],
+    [x - radius * 0.45, y + radius * 0.1, radius * 0.4, radius * 0.11, -0.3],
+    [x + radius * 0.3, y + radius * 0.45, radius * 0.35, radius * 0.09, 0.8],
+  ].forEach(([cx, cy, w, h, rot]) => {
+    ctx.save()
+    ctx.translate(cx, cy)
+    ctx.rotate(rot)
+    ctx.beginPath()
+    ctx.ellipse(0, 0, w, h, 0, 0, Math.PI * 2)
+    ctx.fill()
+    ctx.restore()
+  })
+  ctx.restore()
+
+  // Thin atmosphere rim.
+  ctx.beginPath()
+  ctx.arc(x, y, radius, 0, Math.PI * 2)
+  ctx.strokeStyle = 'rgba(147,197,253,0.7)'
+  ctx.lineWidth = Math.max(1.5, radius * 0.08)
+  ctx.stroke()
+}
+
 function drawBody(ctx: CanvasRenderingContext2D, body: Body, t: number) {
   const p = effectivePosition(body, t)
   const renderPos = { x: p.x, y: p.y, radius: body.radius }
@@ -186,6 +279,11 @@ function GravityWell() {
   )
   const [lastResult, setLastResult] = useState<LevelScore | null>(null)
   const [isNewBest, setIsNewBest] = useState(false)
+  // The canvas's actual on-screen width (it's height-constrained and
+  // centered, so it's rarely the full page width) -- tracked so the
+  // progress row above it can match that width and right-align flush with
+  // the canvas's real right edge instead of the far edge of the page.
+  const [canvasWidth, setCanvasWidth] = useState<number | null>(null)
 
   const totalScore = levelScores.reduce((sum, s) => sum + (s?.total ?? 0), 0)
   const finished = levelIndex >= TIERS.length
@@ -267,13 +365,7 @@ function GravityWell() {
     for (const s of starsRef.current) ctx.fillRect(s.x, s.y, 1.5, 1.5)
 
     // Earth (target)
-    ctx.beginPath()
-    ctx.arc(level.earth.x, level.earth.y, level.earth.radius, 0, Math.PI * 2)
-    ctx.fillStyle = '#4ade80'
-    ctx.fill()
-    ctx.strokeStyle = '#bbf7d0'
-    ctx.lineWidth = 2
-    ctx.stroke()
+    drawEarth(ctx, level.earth)
 
     // Bodies (at their current, possibly orbiting, position)
     for (const body of level.bodies) drawBody(ctx, body, t)
@@ -413,6 +505,21 @@ function GravityWell() {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     }
   }, [])
+
+  // Track the canvas's real rendered width (it's height-constrained and
+  // centered within `.game-area`, so it's usually narrower than the page)
+  // so the progress row above it can be sized to match, keeping the score
+  // flush with the canvas's actual right edge at any viewport size.
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width
+      if (width) setCanvasWidth(width)
+    })
+    observer.observe(canvas)
+    return () => observer.disconnect()
+  }, [level])
 
   // Keyboard aiming: A/D adjust angle, W/S adjust power -- a precise
   // fallback alongside the drag-to-launch control. Only while aiming.
@@ -583,17 +690,6 @@ function GravityWell() {
 
   return (
     <div className="gravity-well fullscreen">
-      <div className="gw-topbar">
-        <img src="/GravityWell.jpeg" alt="Gravity Well" className="banner" />
-        <div className="gw-topbar-text">
-          <h1>Gravity Well</h1>
-          <p>
-            Aim your rocket home to Earth — asteroids nudge your path, planets bend it more,
-            stars bend it a lot.
-          </p>
-        </div>
-      </div>
-
       {finished ? (
         <div className="results">
           <p className="score">🎉 You made it home through all {TIERS.length} levels!</p>
@@ -602,10 +698,10 @@ function GravityWell() {
         </div>
       ) : (
         <>
-          <p className="progress">
-            Level {levelIndex + 1} of {TIERS.length} — {TIERS[levelIndex].name}
+          <div className="progress" style={canvasWidth ? { width: canvasWidth } : undefined}>
             <span className="score-badge">Score: {totalScore}</span>
-          </p>
+            <span className="level-badge">Level {levelIndex + 1} of {TIERS.length}</span>
+          </div>
 
           {!level ? (
             <div className="generating">Generating level…</div>
@@ -622,34 +718,40 @@ function GravityWell() {
                   onPointerUp={handlePointerUp}
                   onPointerCancel={handlePointerUp}
                 />
-              </div>
 
-              {phase === 'won' && lastResult && (
-                <div className="win">
-                  <div className="win-summary">
-                    <span className="win-headline">
-                      🎉 Landed safely! +{lastResult.total}
-                      {isNewBest && <span className="new-best"> New best!</span>}
-                    </span>
-                    <span className="win-breakdown">
-                      {lastResult.landingScore} for landing
-                      {lastResult.bonuses.map((b, i) => (
-                        <span key={i}> · {b.label} +{b.points}</span>
-                      ))}
-                      {!isNewBest && <> · best for this level: {levelScores[levelIndex]?.total}</>}
-                    </span>
+                {/* Overlaid on the canvas (not stacked below it) so winning
+                    or crashing never changes the canvas's own size -- it
+                    used to sit below as a sibling, and its appearing /
+                    disappearing shifted how much flex space the canvas got. */}
+                {phase === 'won' && lastResult && (
+                  <div className="win overlay">
+                    <div className="win-summary">
+                      <span className="win-headline">
+                        🎉 Landed safely! +{lastResult.total}
+                        {isNewBest && <span className="new-best"> New best!</span>}
+                      </span>
+                      <span className="win-breakdown">
+                        {lastResult.landingScore} for landing
+                        {lastResult.bonuses.map((b, i) => (
+                          <span key={i}> · {b.label} +{b.points}</span>
+                        ))}
+                        {!isNewBest && <> · best for this level: {levelScores[levelIndex]?.total}</>}
+                      </span>
+                    </div>
+                    <div className="win-buttons">
+                      <button type="button" onClick={retryLevel}>
+                        Retry for a Better Score
+                      </button>
+                      <button type="button" onClick={nextLevel}>
+                        {levelIndex + 1 === TIERS.length ? 'Finish' : 'Next Level'}
+                      </button>
+                    </div>
                   </div>
-                  <div className="win-buttons">
-                    <button type="button" onClick={retryLevel}>
-                      Retry for a Better Score
-                    </button>
-                    <button type="button" onClick={nextLevel}>
-                      {levelIndex + 1 === TIERS.length ? 'Finish' : 'Next Level'}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {phase === 'crashed' && <div className="feedback bad">💥 Lost contact — resetting…</div>}
+                )}
+                {phase === 'crashed' && (
+                  <div className="feedback bad overlay">💥 Lost contact — resetting…</div>
+                )}
+              </div>
 
               <p className="keyboard-hint">
                 Drag on the canvas like a slingshot to aim &amp; launch — or use A/D/W/S then Launch.
