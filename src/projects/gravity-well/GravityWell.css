@@ -1,10 +1,42 @@
+/* The game fills the viewport below the site header instead of sitting in
+ * the normal, width-capped article column -- see the `:has()` override in
+ * App.css that widens `.site-main` for this page. Everything here (topbar,
+ * progress line, controls) keeps its natural height; `.game-area` is the
+ * one flexible region that soaks up whatever space is left, so the canvas
+ * is always fully visible without scrolling the page. */
+.gravity-well.fullscreen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  gap: 6px;
+  padding: 10px 20px;
+}
+
+.gravity-well .gw-topbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
 .gravity-well .banner {
   display: block;
-  width: 100%;
-  max-width: 600px;
-  height: auto;
-  border-radius: 12px;
-  margin: 0 auto 12px;
+  height: 48px;
+  width: auto;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.gravity-well .gw-topbar-text h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.gravity-well .gw-topbar-text p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  opacity: 0.75;
 }
 
 .gravity-well .progress {
@@ -14,8 +46,16 @@
   color: var(--text-h);
   opacity: 0.7;
   font-size: 14px;
-  margin: 16px 0 12px;
-  max-width: 800px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+.gravity-well .game-area {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .gravity-well .score-badge {
@@ -26,22 +66,48 @@
 
 .gravity-well .keyboard-hint {
   max-width: 800px;
-  margin: 4px auto 0;
+  margin: 0 auto;
   font-size: 12px;
   color: var(--text-h);
   opacity: 0.55;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .gravity-well .gw-canvas {
   display: block;
-  width: 100%;
-  max-width: 800px;
+  width: auto;
   height: auto;
-  margin: 0 auto;
+  max-width: 100%;
+  max-height: 100%;
   border: 2px solid var(--border);
   border-radius: 12px;
   background: #05070f;
+  touch-action: none;
+}
+
+.gravity-well .gw-canvas.aimable {
+  cursor: grab;
+}
+
+.gravity-well .gw-canvas.aimable:active {
+  cursor: grabbing;
+}
+
+.gravity-well .generating {
+  flex: 1;
+  min-height: 0;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--text-h);
+  opacity: 0.7;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
 }
 
 .gravity-well .win {
@@ -51,11 +117,12 @@
   flex-wrap: wrap;
   gap: 16px;
   max-width: 800px;
-  margin: 16px auto 0;
-  padding: 16px;
+  margin: 0 auto;
+  padding: 10px 16px;
   border-radius: 8px;
   color: var(--good);
   background: var(--good-bg);
+  flex-shrink: 0;
 }
 
 .gravity-well .win-buttons {
@@ -98,10 +165,11 @@
 
 .gravity-well .feedback {
   max-width: 800px;
-  margin: 16px auto 0;
-  padding: 12px 16px;
+  margin: 0 auto;
+  padding: 10px 16px;
   border-radius: 8px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .gravity-well .feedback.bad {
@@ -115,11 +183,12 @@
   align-items: center;
   gap: 20px;
   max-width: 800px;
-  margin: 20px auto 0;
-  padding: 16px;
+  margin: 0 auto;
+  padding: 10px 16px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg-alt);
+  flex-shrink: 0;
 }
 
 .gravity-well .control {
@@ -131,8 +200,11 @@
   min-width: 160px;
 }
 
-.gravity-well .control input[type='range'] {
-  width: 100%;
+.gravity-well .control.readout {
+  flex-direction: row;
+  gap: 16px;
+  font-weight: 700;
+  color: var(--text-h);
 }
 
 .gravity-well .control.checkbox {
@@ -158,9 +230,12 @@
 }
 
 .gravity-well .results {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 16px;
   padding: 32px;
 }

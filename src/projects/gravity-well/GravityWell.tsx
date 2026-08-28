@@ -1,15 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   TICK_DT,
   checkOutcome,
+  effectivePosition,
   simulateTrajectory,
   stepRocket,
   surfaceDistance,
   velocityFromAngle,
+  type Body,
   type RocketState,
   type Vec2,
 } from './physics'
-import { LEVELS } from './levels'
+import { TIERS } from './levels'
+import { generateSolvableLevel, type Level } from './levelGen'
 import { scoreLanding, type LevelScore } from './scoring'
 import './GravityWell.css'
 
@@ -20,12 +23,17 @@ const TICKS_PER_FRAME = 6
 const CRASH_PAUSE_MS = 900
 const DEFAULT_ANGLE = 45
 const DEFAULT_POWER = 150
-const ANGLE_MIN = 0
 const ANGLE_MAX = 359
 const ANGLE_STEP = 3
 const POWER_MIN = 40
 const POWER_MAX = 420
 const POWER_STEP = 10
+
+// Drag-to-launch tuning: how far (in canvas px) a full-power pull needs to
+// travel, and the minimum pull distance that counts as an intentional shot
+// rather than an accidental tap.
+const DRAG_MAX_PX = 260
+const MIN_DRAG_PX = 30
 
 type Phase = 'aiming' | 'flying' | 'crashed' | 'won'
 
@@ -39,16 +47,19 @@ function makeStars(width: number, height: number, count: number): Vec2[] {
   return stars
 }
 
-// A deterministic per-body "random" seed so each asteroid's jagged shape
-// and craters stay stable across redraws (every animation frame) instead
-// of flickering, without needing to store extra state per body.
+// A deterministic per-body "random" seed, from the body's spawn point, so
+// each asteroid's jagged shape and craters stay stable across redraws (and
+// while it orbits) instead of flickering or reshaping as it moves.
 function bodySeed(body: { x: number; y: number }): number {
   return body.x * 0.13 + body.y * 0.7
 }
 
-function drawAsteroid(ctx: CanvasRenderingContext2D, body: { x: number; y: number; radius: number }) {
-  const { x, y, radius } = body
-  const seed = bodySeed(body)
+function drawAsteroid(
+  ctx: CanvasRenderingContext2D,
+  pos: { x: number; y: number; radius: number },
+  seed: number,
+) {
+  const { x, y, radius } = pos
   const bumps = 9
   ctx.beginPath()
   for (let i = 0; i <= bumps; i++) {
@@ -86,8 +97,8 @@ function drawAsteroid(ctx: CanvasRenderingContext2D, body: { x: number; y: numbe
   }
 }
 
-function drawPlanet(ctx: CanvasRenderingContext2D, body: { x: number; y: number; radius: number }) {
-  const { x, y, radius } = body
+function drawPlanet(ctx: CanvasRenderingContext2D, pos: { x: number; y: number; radius: number }) {
+  const { x, y, radius } = pos
   ctx.save()
   ctx.beginPath()
   ctx.arc(x, y, radius, 0, Math.PI * 2)
@@ -120,8 +131,8 @@ function drawPlanet(ctx: CanvasRenderingContext2D, body: { x: number; y: number;
   ctx.stroke()
 }
 
-function drawStar(ctx: CanvasRenderingContext2D, body: { x: number; y: number; radius: number }) {
-  const { x, y, radius } = body
+function drawStar(ctx: CanvasRenderingContext2D, pos: { x: number; y: number; radius: number }) {
+  const { x, y, radius } = pos
   ctx.shadowColor = '#ffb347'
   ctx.shadowBlur = 30
   for (let i = 0; i < 12; i++) {
@@ -151,27 +162,36 @@ function drawStar(ctx: CanvasRenderingContext2D, body: { x: number; y: number; r
   ctx.shadowBlur = 0
 }
 
+function drawBody(ctx: CanvasRenderingContext2D, body: Body, t: number) {
+  const p = effectivePosition(body, t)
+  const renderPos = { x: p.x, y: p.y, radius: body.radius }
+  if (body.kind === 'asteroid') drawAsteroid(ctx, renderPos, bodySeed(body))
+  else if (body.kind === 'planet') drawPlanet(ctx, renderPos)
+  else drawStar(ctx, renderPos)
+}
+
 function GravityWell() {
   const [levelIndex, setLevelIndex] = useState(0)
+  const [runSeed, setRunSeed] = useState(() => Math.floor(Math.random() * 1_000_000_000))
+  const [level, setLevel] = useState<Level | null>(null)
   const [phase, setPhase] = useState<Phase>('aiming')
   const [angle, setAngle] = useState(DEFAULT_ANGLE)
   const [power, setPower] = useState(DEFAULT_POWER)
   const [showPreview, setShowPreview] = useState(true)
-  // Best score recorded per level so far (null = not yet landed there).
-  // Retrying an already-passed level can only ever improve this -- a worse
-  // attempt just doesn't overwrite the kept best.
+  // Best score recorded per level so far (null = not yet landed). Retrying
+  // an already-passed level can only ever improve this -- a worse attempt
+  // just doesn't overwrite the kept best.
   const [levelScores, setLevelScores] = useState<(LevelScore | null)[]>(() =>
-    LEVELS.map(() => null),
+    TIERS.map(() => null),
   )
   const [lastResult, setLastResult] = useState<LevelScore | null>(null)
   const [isNewBest, setIsNewBest] = useState(false)
 
   const totalScore = levelScores.reduce((sum, s) => sum + (s?.total ?? 0), 0)
+  const finished = levelIndex >= TIERS.length
 
-  const level = LEVELS[levelIndex]
-  const finished = levelIndex >= LEVELS.length
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const rocketRef = useRef<RocketState>({ pos: level?.rocketStart ?? { x: 0, y: 0 }, vel: { x: 0, y: 0 } })
+  const rocketRef = useRef<RocketState>({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } })
   const trailRef = useRef<Vec2[]>([])
   const rafRef = useRef<number | null>(null)
   // Closest surface distance the rocket ever got to each of the level's
@@ -179,28 +199,72 @@ function GravityWell() {
   // bonuses -- the nearer you skim to a crash without actually crashing,
   // the bigger the bonus for that body.
   const closestApproachRef = useRef<number[]>([])
-  const stars = useMemo(
-    () => (level ? makeStars(level.bounds.width, level.bounds.height, 80) : []),
-    [levelIndex],
-  )
+  // Every generated layout is cached per (run, tier) so retrying a level
+  // reuses the exact same layout -- a fresh one only appears on the next
+  // full run or the first time a tier is reached.
+  const levelCacheRef = useRef<Map<string, Level>>(new Map())
+  const starsRef = useRef<Vec2[]>([])
+  // A free-running clock (seconds) that keeps advancing whether the player
+  // is aiming, flying, or watching a crash -- this is what makes orbiting
+  // bodies visibly drift during aiming, not just mid-flight.
+  const worldTimeRef = useRef(0)
+  // The time value actually used to render body positions right now: tied
+  // to worldTimeRef while aiming/idle, but driven by the flight loop's own
+  // elapsed-since-launch clock while flying, so a flight's physics and its
+  // rendering never disagree about where a mover is.
+  const clockRef = useRef(0)
+  const phaseRef = useRef<Phase>('aiming')
+  useEffect(() => {
+    phaseRef.current = phase
+  }, [phase])
 
-  const preview = useMemo(() => {
-    if (!level || !showPreview || phase !== 'aiming') return null
-    const vel = velocityFromAngle(angle, power)
-    return simulateTrajectory(level.rocketStart, vel, level.bodies, level.earth, level.bounds, 4)
-  }, [level, showPreview, phase, angle, power])
+  const isDraggingRef = useRef(false)
+  const dragPointRef = useRef<Vec2 | null>(null)
+  const dragStartPointRef = useRef<Vec2 | null>(null)
+
+  // Generate (or reuse a cached) layout whenever the tier or run changes.
+  // Generation runs a real solvability search, so it's deferred a tick
+  // behind a "Generating level..." state rather than blocking the render
+  // that shows that state.
+  useEffect(() => {
+    if (finished) return
+    const tier = TIERS[levelIndex]
+    const cacheKey = `${runSeed}:${levelIndex}`
+    const cached = levelCacheRef.current.get(cacheKey)
+    if (cached) {
+      applyNewLevel(cached)
+      return
+    }
+    setLevel(null)
+    const timer = window.setTimeout(() => {
+      const generated = generateSolvableLevel(tier, runSeed + levelIndex * 7919)
+      levelCacheRef.current.set(cacheKey, generated)
+      applyNewLevel(generated)
+    }, 20)
+    return () => window.clearTimeout(timer)
+
+    function applyNewLevel(lvl: Level) {
+      rocketRef.current = { pos: { ...lvl.rocketStart }, vel: { x: 0, y: 0 } }
+      trailRef.current = []
+      starsRef.current = makeStars(lvl.bounds.width, lvl.bounds.height, 80)
+      setPhase('aiming')
+      setLevel(lvl)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [levelIndex, runSeed, finished])
 
   function draw() {
     const canvas = canvasRef.current
     if (!canvas || !level) return
     const ctx = canvas.getContext('2d')
     if (!ctx) return
+    const t = clockRef.current
 
     ctx.fillStyle = '#05070f'
     ctx.fillRect(0, 0, level.bounds.width, level.bounds.height)
 
     ctx.fillStyle = 'rgba(255,255,255,0.6)'
-    for (const s of stars) ctx.fillRect(s.x, s.y, 1.5, 1.5)
+    for (const s of starsRef.current) ctx.fillRect(s.x, s.y, 1.5, 1.5)
 
     // Earth (target)
     ctx.beginPath()
@@ -211,15 +275,15 @@ function GravityWell() {
     ctx.lineWidth = 2
     ctx.stroke()
 
-    // Bodies
-    for (const body of level.bodies) {
-      if (body.kind === 'asteroid') drawAsteroid(ctx, body)
-      else if (body.kind === 'planet') drawPlanet(ctx, body)
-      else drawStar(ctx, body)
-    }
+    // Bodies (at their current, possibly orbiting, position)
+    for (const body of level.bodies) drawBody(ctx, body, t)
 
-    // Trajectory preview
-    if (preview) {
+    // Trajectory preview -- recomputed every frame off the current angle,
+    // power, and the bodies' current orbital phase, so it never lies about
+    // "if I launched right now."
+    if (phase === 'aiming' && showPreview) {
+      const vel = velocityFromAngle(angle, power)
+      const preview = simulateTrajectory(level.rocketStart, vel, level.bodies, level.earth, level.bounds, 4, t)
       ctx.setLineDash([5, 6])
       ctx.strokeStyle = 'rgba(96, 165, 250, 0.8)'
       ctx.lineWidth = 2
@@ -298,6 +362,18 @@ function GravityWell() {
       ctx.lineTo(pos.x + dir.x * 40, pos.y + dir.y * 40)
       ctx.stroke()
     }
+
+    // Slingshot rubber-band while dragging
+    if (phase === 'aiming' && isDraggingRef.current && dragPointRef.current) {
+      ctx.setLineDash([3, 5])
+      ctx.strokeStyle = 'rgba(248,113,113,0.85)'
+      ctx.lineWidth = 3
+      ctx.beginPath()
+      ctx.moveTo(level.rocketStart.x, level.rocketStart.y)
+      ctx.lineTo(dragPointRef.current.x, dragPointRef.current.y)
+      ctx.stroke()
+      ctx.setLineDash([])
+    }
   }
 
   // The animation loop started in launch() captures whichever `draw`
@@ -314,14 +390,32 @@ function GravityWell() {
     draw()
   })
 
+  // Always-running clock/redraw loop -- independent of the flight loop --
+  // so orbiting bodies visibly drift while the player is still aiming (or
+  // watching a crash/win screen), not just during an active flight.
+  useEffect(() => {
+    let raf: number
+    let last = performance.now()
+    function tick(now: number) {
+      const dt = Math.min((now - last) / 1000, 0.05)
+      last = now
+      worldTimeRef.current += dt
+      if (phaseRef.current !== 'flying') clockRef.current = worldTimeRef.current
+      drawRef.current()
+      raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+  }, [])
+
   useEffect(() => {
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     }
   }, [])
 
-  // Keyboard aiming: A/D adjust angle, W/S adjust power. Only while aiming
-  // -- the sliders are disabled at other times, so this mirrors that.
+  // Keyboard aiming: A/D adjust angle, W/S adjust power -- a precise
+  // fallback alongside the drag-to-launch control. Only while aiming.
   useEffect(() => {
     if (phase !== 'aiming') return
     function onKeyDown(e: KeyboardEvent) {
@@ -347,35 +441,93 @@ function GravityWell() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [phase])
 
+  function canvasPoint(e: { clientX: number; clientY: number }): Vec2 {
+    const canvas = canvasRef.current
+    if (!canvas) return { x: 0, y: 0 }
+    const rect = canvas.getBoundingClientRect()
+    return {
+      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
+      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
+    }
+  }
+
+  function updateDrag(point: Vec2) {
+    dragPointRef.current = point
+    if (!level) return
+    const dx = level.rocketStart.x - point.x
+    const dy = level.rocketStart.y - point.y
+    const dist = Math.hypot(dx, dy)
+    if (dist < 4) return
+    const angleDeg = ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360
+    const pull = Math.min(dist, DRAG_MAX_PX)
+    const nextPower = POWER_MIN + (pull / DRAG_MAX_PX) * (POWER_MAX - POWER_MIN)
+    setAngle(Math.round(angleDeg))
+    setPower(Math.round(nextPower))
+  }
+
+  function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!level || phase !== 'aiming') return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    isDraggingRef.current = true
+    dragStartPointRef.current = canvasPoint(e)
+    updateDrag(canvasPoint(e))
+  }
+
+  function handlePointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (!isDraggingRef.current) return
+    updateDrag(canvasPoint(e))
+  }
+
+  function handlePointerUp() {
+    if (!isDraggingRef.current) return
+    const point = dragPointRef.current
+    const startPoint = dragStartPointRef.current
+    isDraggingRef.current = false
+    dragPointRef.current = null
+    dragStartPointRef.current = null
+    if (!level || !point || !startPoint) return
+    // Require the pointer to have actually travelled -- not just to have
+    // landed far from the rocket -- so a plain click/tap anywhere on the
+    // canvas doesn't accidentally fire a shot with no real drag gesture.
+    const travelled = Math.hypot(point.x - startPoint.x, point.y - startPoint.y)
+    if (travelled >= MIN_DRAG_PX) launch()
+  }
+
   function resetAim() {
     if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
     rafRef.current = null
     trailRef.current = []
-    if (level) rocketRef.current = { pos: level.rocketStart, vel: { x: 0, y: 0 } }
+    if (level) rocketRef.current = { pos: { ...level.rocketStart }, vel: { x: 0, y: 0 } }
     setPhase('aiming')
   }
 
   function launch() {
     if (!level || phase !== 'aiming') return
+    const activeLevel = level
     const vel = velocityFromAngle(angle, power)
-    rocketRef.current = { pos: { ...level.rocketStart }, vel }
-    trailRef.current = [{ ...level.rocketStart }]
-    closestApproachRef.current = level.bodies.map(() => Infinity)
+    const startWorldTime = worldTimeRef.current
+    rocketRef.current = { pos: { ...activeLevel.rocketStart }, vel }
+    trailRef.current = [{ ...activeLevel.rocketStart }]
+    closestApproachRef.current = activeLevel.bodies.map(() => Infinity)
+    let flightElapsed = 0
     setPhase('flying')
 
     function frame() {
       for (let i = 0; i < TICKS_PER_FRAME; i++) {
-        rocketRef.current = stepRocket(rocketRef.current, level.bodies, TICK_DT)
+        flightElapsed += TICK_DT
+        const t = startWorldTime + flightElapsed
+        rocketRef.current = stepRocket(rocketRef.current, activeLevel.bodies, TICK_DT, t)
+        clockRef.current = t
         trailRef.current.push(rocketRef.current.pos)
-        level.bodies.forEach((body, bi) => {
-          const d = surfaceDistance(rocketRef.current.pos, body)
+        activeLevel.bodies.forEach((body, bi) => {
+          const d = surfaceDistance(rocketRef.current.pos, body, t)
           if (d < closestApproachRef.current[bi]) closestApproachRef.current[bi] = d
         })
-        const outcome = checkOutcome(rocketRef.current.pos, level.bodies, level.earth, level.bounds)
+        const outcome = checkOutcome(rocketRef.current.pos, activeLevel.bodies, activeLevel.earth, activeLevel.bounds, t)
         if (outcome !== 'flying') {
           drawRef.current()
           if (outcome === 'hit-earth') {
-            const result = scoreLanding(level.bodies, closestApproachRef.current)
+            const result = scoreLanding(activeLevel.bodies, closestApproachRef.current)
             const existingBest = levelScores[levelIndex]
             const newBest = !existingBest || result.total > existingBest.total
             setLastResult(result)
@@ -405,17 +557,15 @@ function GravityWell() {
     setLevelIndex((i) => i + 1)
     setAngle(DEFAULT_ANGLE)
     setPower(DEFAULT_POWER)
-    trailRef.current = []
     setLastResult(null)
-    setPhase('aiming')
   }
 
   // Replay the level just won, for a shot at a better score -- keeps the
   // best score already recorded for it (only a strictly better attempt
-  // will ever replace it) and keeps the current angle/power so small
-  // adjustments are easy, rather than resetting to the defaults.
+  // will ever replace it), keeps the current angle/power, and reuses the
+  // exact same generated layout (see the level-cache effect above).
   function retryLevel() {
-    if (level) rocketRef.current = { pos: level.rocketStart, vel: { x: 0, y: 0 } }
+    if (level) rocketRef.current = { pos: { ...level.rocketStart }, vel: { x: 0, y: 0 } }
     trailRef.current = []
     setLastResult(null)
     setPhase('aiming')
@@ -423,112 +573,112 @@ function GravityWell() {
 
   function restart() {
     setLevelIndex(0)
+    setRunSeed(Math.floor(Math.random() * 1_000_000_000))
     setAngle(DEFAULT_ANGLE)
     setPower(DEFAULT_POWER)
-    trailRef.current = []
     setLastResult(null)
-    setLevelScores(LEVELS.map(() => null))
-    setPhase('aiming')
+    setLevelScores(TIERS.map(() => null))
+    levelCacheRef.current.clear()
   }
 
   return (
-    <div className="gravity-well">
-      <img src="/GravityWell.jpeg" alt="Gravity Well" className="banner" />
-      <h1>Gravity Well</h1>
-      <p>
-        Aim your rocket home to Earth. Asteroids nudge your path, planets bend it more,
-        and stars bend it a lot — use their gravity, don't just fight it.
-      </p>
+    <div className="gravity-well fullscreen">
+      <div className="gw-topbar">
+        <img src="/GravityWell.jpeg" alt="Gravity Well" className="banner" />
+        <div className="gw-topbar-text">
+          <h1>Gravity Well</h1>
+          <p>
+            Aim your rocket home to Earth — asteroids nudge your path, planets bend it more,
+            stars bend it a lot.
+          </p>
+        </div>
+      </div>
 
       {finished ? (
         <div className="results">
-          <p className="score">🎉 You made it home through all {LEVELS.length} levels!</p>
+          <p className="score">🎉 You made it home through all {TIERS.length} levels!</p>
           <p className="stat-line">Final score: {totalScore}</p>
           <button type="button" onClick={restart}>Play Again</button>
         </div>
       ) : (
         <>
           <p className="progress">
-            Level {levelIndex + 1} of {LEVELS.length} — {level.name}
+            Level {levelIndex + 1} of {TIERS.length} — {TIERS[levelIndex].name}
             <span className="score-badge">Score: {totalScore}</span>
           </p>
 
-          <canvas
-            ref={canvasRef}
-            width={level.bounds.width}
-            height={level.bounds.height}
-            className="gw-canvas"
-          />
+          {!level ? (
+            <div className="generating">Generating level…</div>
+          ) : (
+            <>
+              <div className="game-area">
+                <canvas
+                  ref={canvasRef}
+                  width={level.bounds.width}
+                  height={level.bounds.height}
+                  className={'gw-canvas' + (phase === 'aiming' ? ' aimable' : '')}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                />
+              </div>
 
-          {phase === 'won' && lastResult && (
-            <div className="win">
-              <div className="win-summary">
-                <span className="win-headline">
-                  🎉 Landed safely! +{lastResult.total}
-                  {isNewBest && <span className="new-best"> New best!</span>}
-                </span>
-                <span className="win-breakdown">
-                  {lastResult.landingScore} for landing
-                  {lastResult.bonuses.map((b, i) => (
-                    <span key={i}> · {b.label} +{b.points}</span>
-                  ))}
-                  {!isNewBest && <> · best for this level: {levelScores[levelIndex]?.total}</>}
-                </span>
-              </div>
-              <div className="win-buttons">
-                <button type="button" onClick={retryLevel}>
-                  Retry for a Better Score
+              {phase === 'won' && lastResult && (
+                <div className="win">
+                  <div className="win-summary">
+                    <span className="win-headline">
+                      🎉 Landed safely! +{lastResult.total}
+                      {isNewBest && <span className="new-best"> New best!</span>}
+                    </span>
+                    <span className="win-breakdown">
+                      {lastResult.landingScore} for landing
+                      {lastResult.bonuses.map((b, i) => (
+                        <span key={i}> · {b.label} +{b.points}</span>
+                      ))}
+                      {!isNewBest && <> · best for this level: {levelScores[levelIndex]?.total}</>}
+                    </span>
+                  </div>
+                  <div className="win-buttons">
+                    <button type="button" onClick={retryLevel}>
+                      Retry for a Better Score
+                    </button>
+                    <button type="button" onClick={nextLevel}>
+                      {levelIndex + 1 === TIERS.length ? 'Finish' : 'Next Level'}
+                    </button>
+                  </div>
+                </div>
+              )}
+              {phase === 'crashed' && <div className="feedback bad">💥 Lost contact — resetting…</div>}
+
+              <p className="keyboard-hint">
+                Drag on the canvas like a slingshot to aim &amp; launch — or use A/D/W/S then Launch.
+              </p>
+
+              <div className="controls">
+                <div className="control readout">
+                  <span>Angle: {angle}°</span>
+                  <span>Power: {power}</span>
+                </div>
+                <label className="control checkbox">
+                  <input
+                    type="checkbox"
+                    checked={showPreview}
+                    onChange={(e) => setShowPreview(e.target.checked)}
+                  />
+                  <span>Show trajectory preview</span>
+                </label>
+                <button
+                  type="button"
+                  className="launch-button"
+                  onClick={launch}
+                  disabled={phase !== 'aiming'}
+                >
+                  Launch
                 </button>
-                <button type="button" onClick={nextLevel}>
-                  {levelIndex + 1 === LEVELS.length ? 'Finish' : 'Next Level'}
-                </button>
               </div>
-            </div>
+            </>
           )}
-          {phase === 'crashed' && <div className="feedback bad">💥 Lost contact — resetting…</div>}
-
-          <p className="keyboard-hint">Keyboard: A/D aim, W/S power</p>
-
-          <div className="controls">
-            <label className="control">
-              <span>Angle: {angle}°</span>
-              <input
-                type="range"
-                min={ANGLE_MIN}
-                max={ANGLE_MAX}
-                value={angle}
-                disabled={phase !== 'aiming'}
-                onChange={(e) => setAngle(Number(e.target.value))}
-              />
-            </label>
-            <label className="control">
-              <span>Power: {power}</span>
-              <input
-                type="range"
-                min={POWER_MIN}
-                max={POWER_MAX}
-                value={power}
-                disabled={phase !== 'aiming'}
-                onChange={(e) => setPower(Number(e.target.value))}
-              />
-            </label>
-            <label className="control checkbox">
-              <input
-                type="checkbox"
-                checked={showPreview}
-                onChange={(e) => setShowPreview(e.target.checked)}
-              />
-              <span>Show trajectory preview</span>
-            </label>
-            <button
-              type="button"
-              className="launch-button"
-              onClick={launch}
-              disabled={phase !== 'aiming'}
-            >
-              Launch
-            </button>
-          </div>
         </>
       )}
     </div>

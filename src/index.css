@@ -32,7 +32,12 @@ body {
 }
 
 #root {
-  min-height: 100svh;
+  /* A definite (not just minimum) height so a flex child that needs to
+   * fill -- and clip to -- exactly the viewport (see Gravity Well) can
+   * resolve percentage/flex sizing against it. Other pages are unaffected:
+   * they don't opt into shrinking below their content size, so they still
+   * grow the page and scroll normally when their content is tall. */
+  height: 100svh;
   display: flex;
   flex-direction: column;
 }

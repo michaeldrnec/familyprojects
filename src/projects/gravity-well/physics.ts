@@ -11,12 +11,24 @@ export interface Vec2 {
 
 export type BodyKind = 'asteroid' | 'planet' | 'star'
 
+/** A body orbiting a fixed point in space. `x`/`y` on the owning `Body` are
+ * its position at t=0 (kept in sync with this at generation time); its
+ * position at any other moment comes from `effectivePosition`. */
+export interface Orbit {
+  cx: number
+  cy: number
+  radius: number
+  angularSpeed: number // radians/sec
+  phase: number // radians, at t=0
+}
+
 export interface Body {
   x: number
   y: number
   radius: number
   mass: number
   kind: BodyKind
+  orbit?: Orbit
 }
 
 export interface Target {
@@ -58,9 +70,22 @@ export function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
-/** Distance from the rocket's edge to a body's surface (0 if touching/inside). */
-export function surfaceDistance(pos: Vec2, body: Body): number {
-  return Math.max(0, distance(pos, body) - body.radius - ROCKET_RADIUS)
+/** Where a body actually is at time `t` (seconds since the shot in question
+ * started) -- static bodies just return their fixed position; orbiting ones
+ * sweep around their orbit's center. This is the single source of truth for
+ * body position used by gravity, collision, and scoring, so a moving body
+ * can never be in one place for physics and another for rendering/scoring. */
+export function effectivePosition(body: Body, t: number): Vec2 {
+  if (!body.orbit) return { x: body.x, y: body.y }
+  const { cx, cy, radius, angularSpeed, phase } = body.orbit
+  const a = phase + angularSpeed * t
+  return { x: cx + radius * Math.cos(a), y: cy + radius * Math.sin(a) }
+}
+
+/** Distance from the rocket's edge to a body's surface (0 if touching/inside)
+ * at time `t`. */
+export function surfaceDistance(pos: Vec2, body: Body, t = 0): number {
+  return Math.max(0, distance(pos, effectivePosition(body, t)) - body.radius - ROCKET_RADIUS)
 }
 
 /** Convert an aim angle (degrees, clockwise from "up") and a speed into a velocity vector. */
@@ -69,13 +94,14 @@ export function velocityFromAngle(angleDeg: number, power: number): Vec2 {
   return { x: power * Math.sin(rad), y: -power * Math.cos(rad) }
 }
 
-/** Sum of gravitational acceleration from every body, at `pos`. */
-export function accelerationAt(pos: Vec2, bodies: Body[]): Vec2 {
+/** Sum of gravitational acceleration from every body, at `pos`, at time `t`. */
+export function accelerationAt(pos: Vec2, bodies: Body[], t = 0): Vec2 {
   let ax = 0
   let ay = 0
   for (const body of bodies) {
-    const dx = body.x - pos.x
-    const dy = body.y - pos.y
+    const bodyPos = effectivePosition(body, t)
+    const dx = bodyPos.x - pos.x
+    const dy = bodyPos.y - pos.y
     const distSq = dx * dx + dy * dy
     const dist = Math.sqrt(distSq) || 1
     const strength = (G * body.mass) / distSq
@@ -85,23 +111,25 @@ export function accelerationAt(pos: Vec2, bodies: Body[]): Vec2 {
   return { x: ax, y: ay }
 }
 
-/** Advance the rocket by one fixed tick (semi-implicit Euler: velocity first, then position). */
-export function stepRocket(state: RocketState, bodies: Body[], dt: number): RocketState {
-  const acc = accelerationAt(state.pos, bodies)
+/** Advance the rocket by one fixed tick (semi-implicit Euler: velocity first,
+ * then position), using the gravity field as it is at time `t`. */
+export function stepRocket(state: RocketState, bodies: Body[], dt: number, t = 0): RocketState {
+  const acc = accelerationAt(state.pos, bodies, t)
   const vel = { x: state.vel.x + acc.x * dt, y: state.vel.y + acc.y * dt }
   const pos = { x: state.pos.x + vel.x * dt, y: state.pos.y + vel.y * dt }
   return { pos, vel }
 }
 
-/** What (if anything) has happened to the rocket at this position. */
+/** What (if anything) has happened to the rocket at this position, at time `t`. */
 export function checkOutcome(
   pos: Vec2,
   bodies: Body[],
   earth: Target,
   bounds: Bounds,
+  t = 0,
 ): FlightOutcome {
   for (const body of bodies) {
-    if (distance(pos, body) < body.radius + ROCKET_RADIUS) return 'crashed'
+    if (distance(pos, effectivePosition(body, t)) < body.radius + ROCKET_RADIUS) return 'crashed'
   }
   if (distance(pos, earth) < earth.radius + ROCKET_RADIUS) return 'hit-earth'
   if (
@@ -129,12 +157,15 @@ export function simulateTrajectory(
   earth: Target,
   bounds: Bounds,
   sampleEvery = 1,
+  t0 = 0,
+  maxTicks = MAX_TICKS,
 ): TrajectoryResult {
   let state: RocketState = { pos: { ...start }, vel: { ...vel } }
   const points: Vec2[] = [state.pos]
-  for (let tick = 1; tick <= MAX_TICKS; tick++) {
-    state = stepRocket(state, bodies, TICK_DT)
-    const outcome = checkOutcome(state.pos, bodies, earth, bounds)
+  for (let tick = 1; tick <= maxTicks; tick++) {
+    const t = t0 + tick * TICK_DT
+    state = stepRocket(state, bodies, TICK_DT, t)
+    const outcome = checkOutcome(state.pos, bodies, earth, bounds, t)
     if (tick % sampleEvery === 0 || outcome !== 'flying') points.push(state.pos)
     if (outcome !== 'flying') return { points, outcome }
   }
