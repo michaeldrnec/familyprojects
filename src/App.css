@@ -44,7 +44,8 @@
  * column so its playable area can fill the viewport and stay fully
  * visible without scrolling -- see GravityWell.css for the flex layout
  * that fills this space. */
-.site-main:has(> .gravity-well.fullscreen) {
+.site-main:has(> .gravity-well.fullscreen),
+.site-main:has(> .starwarden.fullscreen) {
   max-width: none;
   padding: 0;
   display: flex;

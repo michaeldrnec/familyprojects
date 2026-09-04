@@ -45,4 +45,9 @@ export const projects: Project[] = [
     title: 'Xenofuse',
     description: 'Decipher the alien glyphs and defuse each panel before the shared timer hits zero.',
   },
+  {
+    slug: 'starwarden',
+    title: 'Starwarden',
+    description: 'Hold the line in a scrolling alien warzone — survive as long as fuel and power crystals last.',
+  },
 ]
