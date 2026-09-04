@@ -795,6 +795,31 @@ function Starwarden() {
     setMuted(next)
   }
 
+  // On-screen touch controls (spec.md's keyboard-only v1, extended for
+  // mobile): each button just sets the same keysRef flags the keyboard
+  // handler does, so update()/stepShip don't need to know controls came
+  // from a finger instead of a key. Pointer events (not touch events) so
+  // one handler covers touch, pen, and mouse, and multiple fingers on
+  // different buttons are tracked independently by the browser.
+  function bindTouch(key: keyof typeof keysRef.current) {
+    return {
+      onPointerDown: (e: React.PointerEvent) => {
+        e.preventDefault()
+        keysRef.current[key] = true
+      },
+      onPointerUp: (e: React.PointerEvent) => {
+        e.preventDefault()
+        keysRef.current[key] = false
+      },
+      onPointerLeave: () => {
+        keysRef.current[key] = false
+      },
+      onPointerCancel: () => {
+        keysRef.current[key] = false
+      },
+    }
+  }
+
   return (
     <div className="starwarden fullscreen">
       <div className="sw-game-area">
@@ -803,6 +828,30 @@ function Starwarden() {
         <button type="button" className="sw-mute" onClick={toggleMute} aria-label={muted ? 'Unmute sound' : 'Mute sound'}>
           {muted ? '🔇' : '🔊'}
         </button>
+
+        {phase === 'playing' && (
+          <div className="sw-touch-controls" aria-hidden="true">
+            <div className="sw-dpad">
+              <span className="sw-dpad-slot" />
+              <button type="button" className="sw-touch-btn" {...bindTouch('up')}>▲</button>
+              <span className="sw-dpad-slot" />
+              <button type="button" className="sw-touch-btn" {...bindTouch('left')}>◀</button>
+              <span className="sw-dpad-slot" />
+              <button type="button" className="sw-touch-btn" {...bindTouch('right')}>▶</button>
+              <span className="sw-dpad-slot" />
+              <button type="button" className="sw-touch-btn" {...bindTouch('down')}>▼</button>
+              <span className="sw-dpad-slot" />
+            </div>
+            <div className="sw-action-pad">
+              <button type="button" className="sw-touch-btn sw-touch-thrust" {...bindTouch('thrust')}>
+                THRUST
+              </button>
+              <button type="button" className="sw-touch-btn sw-touch-fire" {...bindTouch('fire')}>
+                FIRE
+              </button>
+            </div>
+          </div>
+        )}
 
         {phase === 'intro' && (
           <div className="sw-overlay">
@@ -817,6 +866,7 @@ function Starwarden() {
               <li><kbd>Space</kbd> engine thrust (uses fuel)</li>
               <li><kbd>X</kbd> fire laser (uses a power crystal)</li>
             </ul>
+            <p className="sw-touch-hint">On a touchscreen, on-screen controls appear once you launch.</p>
             <button type="button" className="sw-primary" onClick={start}>
               Launch
             </button>
