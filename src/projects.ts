@@ -40,4 +40,9 @@ export const projects: Project[] = [
     title: 'Gravity Well',
     description: 'Aim your rocket home to Earth, bending its path around asteroids, planets, and stars.',
   },
+  {
+    slug: 'xenofuse',
+    title: 'Xenofuse',
+    description: 'Decipher the alien glyphs and defuse each panel before the shared timer hits zero.',
+  },
 ]

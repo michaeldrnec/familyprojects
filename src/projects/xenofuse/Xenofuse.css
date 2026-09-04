@@ -1,0 +1,240 @@
+.xenofuse .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.xenofuse {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.xf-intro {
+  text-align: center;
+  padding: 24px 0;
+}
+
+.xf-tagline {
+  color: var(--text-h);
+  font-size: 16px;
+  line-height: 1.5;
+  max-width: 520px;
+  margin: 0 auto 24px;
+}
+
+.xf-primary {
+  background: var(--accent);
+  color: #05070f;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.xf-secondary {
+  background: var(--bg-alt);
+  color: var(--text-h);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.xf-topbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text-h);
+  font-size: 14px;
+  opacity: 0.85;
+  margin: 8px 0;
+}
+
+.xf-score {
+  font-weight: 700;
+  opacity: 1;
+  color: var(--accent);
+}
+
+.xf-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  font-size: 18px;
+  color: var(--text-h);
+}
+
+.xf-timer.critical {
+  color: #f87171;
+  animation: xf-pulse 0.6s infinite;
+}
+
+@keyframes xf-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.xf-stages {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 4px 0 18px;
+}
+
+.xf-stage-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+}
+
+.xf-stage-dot.cleared {
+  background: #4ade80;
+  border-color: #4ade80;
+}
+
+.xf-stage-dot.active {
+  border-color: var(--accent);
+}
+
+.xf-panel {
+  background: var(--bg-alt);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+}
+
+.xf-panel.wrong {
+  border-color: #f87171;
+}
+
+.xf-panel-label {
+  color: var(--text-h);
+  opacity: 0.7;
+  font-size: 13px;
+  margin: 0 0 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.xf-code {
+  font-size: 32px;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  word-break: break-all;
+  margin-bottom: 18px;
+}
+
+.xf-clue-text {
+  color: var(--text-h);
+  font-size: 15px;
+  line-height: 1.5;
+  max-width: 480px;
+  margin: 0 auto 16px;
+}
+
+.xf-clue-table {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.xf-clue-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 15px;
+  color: var(--text-h);
+}
+
+.xf-clue-glyph {
+  color: var(--accent);
+  font-size: 17px;
+}
+
+.xf-clue-eq {
+  opacity: 0.5;
+}
+
+.xf-input-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.xf-input {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 16px;
+  color: var(--text-h);
+  width: 220px;
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.xf-hint-button {
+  background: none;
+  border: none;
+  color: var(--text-h);
+  opacity: 0.7;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.xf-hint-button:disabled {
+  opacity: 0.3;
+  cursor: default;
+  text-decoration: none;
+}
+
+.xf-wrong-msg {
+  color: #f87171;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+.xf-result {
+  text-align: center;
+  padding: 32px 0;
+}
+
+.xf-result-headline {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-h);
+  margin-bottom: 8px;
+}
+
+.xf-result-detail {
+  color: var(--text-h);
+  opacity: 0.8;
+  margin-bottom: 20px;
+}
+
+.xf-result-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
