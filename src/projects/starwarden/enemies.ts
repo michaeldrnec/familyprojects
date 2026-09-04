@@ -54,11 +54,22 @@ const DIVER_ACCEL = 90
 const DIVER_MAX_SPEED = 210
 const DRIFTER_SPEED = 70
 
-// How the enemy-type mix shifts over survival time: mostly harmless
-// drifters early on, gunners and divers phasing in as the run goes on --
-// the difficulty ramp described in spec.md section 11.
-function weightsFor(elapsed: number): Record<EnemyType, number> {
-  const t = Math.min(1, elapsed / 90) // reaches the "late run" mix by 90s
+// Enemies escalate in a clear step every ESCALATION_INTERVAL seconds
+// (rather than smoothly ramping continuously) -- level 0 for the first
+// minute, level 1 for the second, and so on, matching the "escalating
+// every 60 seconds" ask and giving Starwarden.tsx a clean integer to
+// detect a level change against (to trigger the escalation banner/burst).
+export const ESCALATION_INTERVAL = 60
+const MAX_LEVEL_FOR_MIX = 6 // the enemy-type mix reaches its toughest by this level
+
+export function enemyLevel(elapsed: number): number {
+  return Math.floor(elapsed / ESCALATION_INTERVAL)
+}
+
+// How the enemy-type mix shifts as the level climbs: mostly harmless
+// drifters at level 0, gunners and divers phasing in at each escalation.
+function weightsFor(level: number): Record<EnemyType, number> {
+  const t = Math.min(1, level / MAX_LEVEL_FOR_MIX)
   return {
     drifter: 1 - 0.6 * t,
     gunner: 0.3 * t,
@@ -66,8 +77,8 @@ function weightsFor(elapsed: number): Record<EnemyType, number> {
   }
 }
 
-function pickType(rng: Rng, elapsed: number): EnemyType {
-  const weights = weightsFor(elapsed)
+function pickType(rng: Rng, level: number): EnemyType {
+  const weights = weightsFor(level)
   const total = weights.drifter + weights.gunner + weights.diver
   let roll = rng.next() * total
   for (const type of ['drifter', 'gunner', 'diver'] as EnemyType[]) {
@@ -77,10 +88,10 @@ function pickType(rng: Rng, elapsed: number): EnemyType {
   return 'drifter'
 }
 
-// Spawn interval shrinks (more frequent spawns) as survival time
-// accumulates, floored so the screen never becomes unfairly saturated.
-export function spawnInterval(elapsed: number): number {
-  return Math.max(0.55, 2.2 - elapsed * 0.018)
+// Spawn interval shrinks a step at a time with each escalation level,
+// floored so the screen never becomes unfairly saturated.
+export function spawnInterval(level: number): number {
+  return Math.max(0.5, 2.2 - level * 0.25)
 }
 
 // Tumble/bank rate per type: drifters (spinning space mines) tumble
@@ -92,8 +103,8 @@ const ROTATION_SPEED_RANGE: Record<EnemyType, [number, number]> = {
   diver: [-0.6, 0.6],
 }
 
-export function spawnEnemy(rng: Rng, elapsed: number, worldWidth: number, nextId: number): Enemy {
-  const type = pickType(rng, elapsed)
+export function spawnEnemy(rng: Rng, level: number, worldWidth: number, nextId: number): Enemy {
+  const type = pickType(rng, level)
   const [rotMin, rotMax] = ROTATION_SPEED_RANGE[type]
   return {
     id: nextId,

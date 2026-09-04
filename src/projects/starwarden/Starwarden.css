@@ -185,7 +185,8 @@
 }
 
 .starwarden .sw-touch-thrust,
-.starwarden .sw-touch-fire {
+.starwarden .sw-touch-fire,
+.starwarden .sw-touch-nova {
   width: 74px;
   height: 74px;
   border-radius: 50%;
@@ -195,6 +196,18 @@
 .starwarden .sw-touch-fire {
   background: rgba(103, 232, 249, 0.18);
   border-color: rgba(103, 232, 249, 0.55);
+}
+
+.starwarden .sw-touch-nova {
+  width: 58px;
+  height: 58px;
+  align-self: center;
+  background: rgba(253, 224, 71, 0.16);
+  border-color: rgba(253, 224, 71, 0.55);
+}
+
+.starwarden .sw-touch-nova:active {
+  background: rgba(253, 224, 71, 0.4);
 }
 
 .starwarden .sw-touch-fire:active {

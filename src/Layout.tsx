@@ -5,6 +5,7 @@ function Layout() {
   const location = useLocation()
   const isHome = location.pathname === '/'
   const isGravityWell = location.pathname === '/gravity-well'
+  const isStarwarden = location.pathname === '/starwarden'
 
   return (
     <>
@@ -20,6 +21,12 @@ function Layout() {
           <>
             <span className="header-divider" aria-hidden="true" />
             <img src="/GravityWellHeader2.jpeg" alt="Gravity Well" className="header-game-logo" />
+          </>
+        )}
+        {isStarwarden && (
+          <>
+            <span className="header-divider" aria-hidden="true" />
+            <img src="/StarwardenHeader.svg" alt="Starwarden" className="header-game-logo" />
           </>
         )}
       </header>

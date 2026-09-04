@@ -4,8 +4,8 @@ import {
   FUEL_MAX,
   HEALTH_MAX,
   SHIELD_ACTIVE_DURATION,
-  SHIELD_COOLDOWN_UNUSED,
-  SHIELD_COOLDOWN_USED,
+  SHIELD_FLASH_DURATION,
+  SHIELD_REGEN_TIME,
   SHIELD_TRIGGER_RANGE,
   SHIP_RADIUS,
   VIEW_HEIGHT,
@@ -19,6 +19,7 @@ import {
 } from './physics'
 import {
   ENEMY_POINTS,
+  enemyLevel,
   spawnEnemy,
   spawnInterval,
   stepEnemies,
@@ -37,6 +38,7 @@ import {
   spawnPowerup,
   type Powerup,
 } from './powerups'
+import { NOVA_CLEAR_MARGIN, NOVA_FLASH_DURATION, NOVA_MAX_CHARGES, NOVA_RECHARGE_TIME } from './nova'
 import { survivalPoints } from './scoring'
 import { makeRng, type Rng } from './rng'
 import * as audio from './audio'
@@ -48,6 +50,8 @@ const LASER_SPEED = 520
 const LASER_COOLDOWN = 0.22
 const RAM_DAMAGE_RADIUS_PAD = 4
 const ASTEROID_INTERVAL = 8
+const ESCALATION_BANNER_DURATION = 2.5
+const ESCALATION_BURST_COUNT = 2
 
 interface GameState {
   ship: ShipState
@@ -64,6 +68,12 @@ interface GameState {
   fireCooldown: number
   idCounter: number
   rng: Rng
+  enemyLevel: number
+  escalationBannerTimer: number
+  escalationText: string
+  novaCharges: number
+  novaTimer: number
+  novaFlashTimer: number
 }
 
 function newGame(seed: number): GameState {
@@ -82,6 +92,12 @@ function newGame(seed: number): GameState {
     fireCooldown: 0,
     idCounter: 1,
     rng: makeRng(seed),
+    enemyLevel: 0,
+    escalationBannerTimer: 0,
+    escalationText: '',
+    novaCharges: 1,
+    novaTimer: 0,
+    novaFlashTimer: 0,
   }
 }
 
@@ -119,6 +135,29 @@ function drawShip(ctx: CanvasRenderingContext2D, ship: ShipState) {
     ctx.arc(0, 0, SHIP_RADIUS + 9, 0, Math.PI * 2)
     ctx.fillStyle = `rgba(103,232,249,${0.08 + 0.08 * pulse})`
     ctx.fill()
+  } else if (ship.shieldState === 'charging') {
+    // A thin progress arc that fills in as the clean-streak regen timer
+    // builds toward SHIELD_REGEN_TIME, slowly rotating so it visibly reads
+    // as "charging" rather than a static gauge.
+    const progress = Math.min(1, ship.shieldTimer / SHIELD_REGEN_TIME)
+    if (progress > 0) {
+      const rotation = ship.shieldTimer * 0.8
+      ctx.beginPath()
+      ctx.arc(0, 0, SHIP_RADIUS + 8, -Math.PI / 2 + rotation, -Math.PI / 2 + rotation + progress * Math.PI * 2)
+      ctx.strokeStyle = 'rgba(103,232,249,0.55)'
+      ctx.lineWidth = 2
+      ctx.stroke()
+    }
+  }
+
+  // A brief expanding burst when the shield finishes its regen streak.
+  if (ship.shieldFlash > 0) {
+    const t = 1 - ship.shieldFlash / SHIELD_FLASH_DURATION
+    ctx.beginPath()
+    ctx.arc(0, 0, SHIP_RADIUS + 6 + t * 26, 0, Math.PI * 2)
+    ctx.strokeStyle = `rgba(165,243,252,${0.9 * (1 - t)})`
+    ctx.lineWidth = 3
+    ctx.stroke()
   }
 
   ctx.scale(ship.facing, 1)
@@ -394,9 +433,36 @@ function drawHud(ctx: CanvasRenderingContext2D, gs: GameState) {
   }
 
   if (gs.ship.shieldState !== 'ready') {
-    ctx.fillStyle = gs.ship.shieldState === 'active' ? '#67e8f9' : 'rgba(255,255,255,0.4)'
+    ctx.fillStyle = gs.ship.shieldState === 'active' ? '#67e8f9' : 'rgba(255,255,255,0.45)'
     ctx.font = '11px sans-serif'
-    ctx.fillText(gs.ship.shieldState === 'active' ? 'Shield up' : 'Shield charging', VIEW_WIDTH - gaugeW - 16, 92)
+    const label =
+      gs.ship.shieldState === 'active'
+        ? 'Shield up'
+        : `Shield in ${Math.max(0, Math.ceil(SHIELD_REGEN_TIME - gs.ship.shieldTimer))}s`
+    ctx.fillText(label, VIEW_WIDTH - gaugeW - 16, 92)
+  } else if (gs.ship.shieldFlash > 0) {
+    ctx.fillStyle = '#a5f3fc'
+    ctx.font = 'bold 11px sans-serif'
+    ctx.fillText('Shield ready!', VIEW_WIDTH - gaugeW - 16, 92)
+  }
+
+  // Nova Bomb readout: charge count plus a thin recharge progress bar
+  // whenever a charge is still filling.
+  const novaY = 108
+  ctx.fillStyle = gs.novaCharges > 0 ? '#fde047' : 'rgba(255,255,255,0.4)'
+  ctx.font = 'bold 12px sans-serif'
+  ctx.fillText(`NOVA ×${gs.novaCharges} (C)`, VIEW_WIDTH - gaugeW - 16, novaY)
+  if (gs.novaCharges < NOVA_MAX_CHARGES) {
+    drawGauge(ctx, VIEW_WIDTH - gaugeW - 16, novaY + 16, gaugeW, 6, gs.novaTimer / NOVA_RECHARGE_TIME, '#fde047', '')
+  }
+
+  if (gs.escalationBannerTimer > 0) {
+    const alpha = Math.min(1, gs.escalationBannerTimer / 0.4)
+    ctx.textAlign = 'center'
+    ctx.font = 'bold 22px sans-serif'
+    ctx.fillStyle = `rgba(248,113,113,${alpha})`
+    ctx.fillText(gs.escalationText, VIEW_WIDTH / 2, 60)
+    ctx.textAlign = 'left'
   }
 
   // Radar: the whole wraparound world compressed into one strip, spec.md
@@ -436,7 +502,10 @@ function Starwarden() {
   const phaseRef = useRef<Phase>('intro')
   const gsRef = useRef<GameState>(newGame(1))
   const starsRef = useRef(makeStars(makeRng(7), 140))
-  const keysRef = useRef({ up: false, down: false, left: false, right: false, thrust: false, fire: false })
+  const keysRef = useRef({ up: false, down: false, left: false, right: false, thrust: false, fire: false, nova: false })
+  // Edge-detects the nova key so holding it down doesn't burn every charge
+  // in a single press -- only a fresh keydown (or touch tap) fires it.
+  const novaPrevRef = useRef(false)
 
   useEffect(() => {
     phaseRef.current = phase
@@ -450,8 +519,11 @@ function Starwarden() {
       else if (key === 'arrowdown' || key === 's') k.down = true
       else if (key === 'arrowleft' || key === 'a') k.left = true
       else if (key === 'arrowright' || key === 'd') k.right = true
-      else if (key === ' ') k.thrust = true
+      // Thrust (Z) and fire (X) are adjacent keys, both reachable by the
+      // same hand as a single unit.
+      else if (key === 'z') k.thrust = true
       else if (key === 'x') k.fire = true
+      else if (key === 'c') k.nova = true
       else return
       e.preventDefault()
     }
@@ -462,8 +534,9 @@ function Starwarden() {
       else if (key === 'arrowdown' || key === 's') k.down = false
       else if (key === 'arrowleft' || key === 'a') k.left = false
       else if (key === 'arrowright' || key === 'd') k.right = false
-      else if (key === ' ') k.thrust = false
+      else if (key === 'z') k.thrust = false
       else if (key === 'x') k.fire = false
+      else if (key === 'c') k.nova = false
       else return
       e.preventDefault()
     }
@@ -500,10 +573,66 @@ function Starwarden() {
       audio.playLaser()
     }
 
+    // Nova Bomb recharge: a passive trickle, capped so charges can't be
+    // stockpiled forever.
+    if (gs.novaCharges < NOVA_MAX_CHARGES) {
+      gs.novaTimer += dt
+      if (gs.novaTimer >= NOVA_RECHARGE_TIME) {
+        gs.novaCharges += 1
+        gs.novaTimer = 0
+      }
+    }
+    gs.novaFlashTimer = Math.max(0, gs.novaFlashTimer - dt)
+
+    // Nova Bomb trigger: edge-detected so holding the key doesn't burn
+    // every charge in one press. Clears everything currently on screen
+    // (enemies, asteroids, enemy projectiles) -- off-screen threats
+    // elsewhere on the wraparound loop are untouched, so it's a panic
+    // button for the immediate danger, not a whole-run reset.
+    const novaPressed = keysRef.current.nova && !novaPrevRef.current
+    novaPrevRef.current = keysRef.current.nova
+    if (novaPressed && gs.novaCharges > 0) {
+      gs.novaCharges -= 1
+      gs.novaFlashTimer = NOVA_FLASH_DURATION
+      audio.playNova()
+      const onScreen = (worldX: number) => {
+        const sx = screenX(worldX, gs.ship.worldX)
+        return sx > -NOVA_CLEAR_MARGIN && sx < VIEW_WIDTH + NOVA_CLEAR_MARGIN
+      }
+      const clearedEnemies = gs.enemies.filter((e) => onScreen(e.worldX))
+      const clearedAsteroids = gs.asteroids.filter((a) => onScreen(a.worldX))
+      for (const e of clearedEnemies) {
+        gs.score += ENEMY_POINTS[e.type]
+        gs.explosions.push(spawnExplosion(gs.rng, e.worldX, e.y, gs.idCounter++, 'small'))
+      }
+      for (const a of clearedAsteroids) {
+        gs.score += ASTEROID_POINTS
+        gs.explosions.push(spawnExplosion(gs.rng, a.worldX, a.y, gs.idCounter++, 'small'))
+      }
+      gs.enemies = gs.enemies.filter((e) => !onScreen(e.worldX))
+      gs.asteroids = gs.asteroids.filter((a) => !onScreen(a.worldX))
+      gs.projectiles = gs.projectiles.filter((p) => p.owner !== 'enemy' || !onScreen(p.worldX))
+    }
+
+    const level = enemyLevel(gs.elapsed)
+    if (level > gs.enemyLevel) {
+      // A new escalation level: announce it, and throw in an immediate
+      // burst of enemies at the new level's mix rather than waiting for
+      // the regular spawn timer to slowly catch up.
+      gs.enemyLevel = level
+      gs.escalationBannerTimer = ESCALATION_BANNER_DURATION
+      gs.escalationText = `⚠ ENEMIES ESCALATING — LEVEL ${level + 1}`
+      audio.playEscalation()
+      for (let i = 0; i < ESCALATION_BURST_COUNT; i++) {
+        gs.enemies.push(spawnEnemy(gs.rng, level, WORLD_WIDTH, gs.idCounter++))
+      }
+    }
+    gs.escalationBannerTimer = Math.max(0, gs.escalationBannerTimer - dt)
+
     gs.spawnTimer -= dt
     if (gs.spawnTimer <= 0) {
-      gs.enemies.push(spawnEnemy(gs.rng, gs.elapsed, WORLD_WIDTH, gs.idCounter++))
-      gs.spawnTimer = spawnInterval(gs.elapsed) * gs.rng.range(0.7, 1.3)
+      gs.enemies.push(spawnEnemy(gs.rng, gs.enemyLevel, WORLD_WIDTH, gs.idCounter++))
+      gs.spawnTimer = spawnInterval(gs.enemyLevel) * gs.rng.range(0.7, 1.3)
     }
 
     gs.asteroidTimer -= dt
@@ -660,30 +789,40 @@ function Starwarden() {
     if (collectedIds.size > 0) gs.powerups = gs.powerups.filter((p) => !collectedIds.has(p.id))
 
     // Resolve the shield: while active, absorb the first hit of the frame
-    // (if any) and go on the longer "used" cooldown; otherwise tick down
-    // toward ready, using the shorter "unused" cooldown if the window
-    // simply expired with nothing to block.
+    // (if any) and start the regen streak from zero; otherwise start the
+    // streak once the active window simply expires unused. While charging,
+    // a clean streak with no damage taken counts up toward
+    // SHIELD_REGEN_TIME; any hit taken during that streak resets it to
+    // zero instead of just slowing it down -- the shield comes back only
+    // after a genuinely clean stretch.
+    let shieldFlash = Math.max(0, gs.ship.shieldFlash - dt)
     if (shieldState === 'active') {
       if (hits > 0) {
         hits -= 1
-        shieldState = 'cooldown'
-        shieldTimer = SHIELD_COOLDOWN_USED
+        shieldState = 'charging'
+        shieldTimer = 0
       } else {
         shieldTimer -= dt
         if (shieldTimer <= 0) {
-          shieldState = 'cooldown'
-          shieldTimer = SHIELD_COOLDOWN_UNUSED
+          shieldState = 'charging'
+          shieldTimer = 0
         }
       }
-    } else if (shieldState === 'cooldown') {
-      shieldTimer -= dt
-      if (shieldTimer <= 0) {
-        shieldState = 'ready'
+    } else if (shieldState === 'charging') {
+      if (hits > 0) {
         shieldTimer = 0
+      } else {
+        shieldTimer += dt
+        if (shieldTimer >= SHIELD_REGEN_TIME) {
+          shieldState = 'ready'
+          shieldTimer = 0
+          shieldFlash = SHIELD_FLASH_DURATION
+          audio.playShieldRegen()
+        }
       }
     }
 
-    gs.ship = { ...gs.ship, shieldState, shieldTimer }
+    gs.ship = { ...gs.ship, shieldState, shieldTimer, shieldFlash }
     if (hits > 0) {
       gs.ship = { ...gs.ship, health: gs.ship.health - hits }
       audio.playHit()
@@ -713,11 +852,27 @@ function Starwarden() {
     ctx.fillStyle = '#03040a'
     ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
 
-    ctx.fillStyle = 'rgba(255,255,255,0.55)'
+    // Star warp effect: stars stretch into streaks trailing behind the
+    // ship's motion as speed builds under thrust, and shrink back to dots
+    // as the ship coasts down -- length tracks |vx| directly so it scales
+    // smoothly with the same momentum the long-coast physics already model.
+    const speed = Math.abs(gs.ship.vx)
+    const streakLen = Math.min(70, speed * 0.28)
+    const dir = gs.ship.vx >= 0 ? 1 : -1
     for (const s of starsRef.current) {
       const sx = screenX(s.worldX, gs.ship.worldX)
-      if (sx < -10 || sx > VIEW_WIDTH + 10) continue
-      ctx.fillRect(sx, s.y, s.r, s.r)
+      if (sx < -80 || sx > VIEW_WIDTH + 80) continue
+      if (streakLen > 3) {
+        ctx.strokeStyle = `rgba(255,255,255,${gs.ship.thrusting ? 0.75 : 0.5})`
+        ctx.lineWidth = s.r
+        ctx.beginPath()
+        ctx.moveTo(sx, s.y)
+        ctx.lineTo(sx + dir * streakLen, s.y)
+        ctx.stroke()
+      } else {
+        ctx.fillStyle = 'rgba(255,255,255,0.55)'
+        ctx.fillRect(sx, s.y, s.r, s.r)
+      }
     }
 
     const pulse = 0.5 + 0.5 * Math.sin(gs.elapsed * 3)
@@ -758,6 +913,12 @@ function Starwarden() {
 
     if (gs.ship.health > 0) drawShip(ctx, gs.ship)
     drawHud(ctx, gs)
+
+    if (gs.novaFlashTimer > 0) {
+      const alpha = (gs.novaFlashTimer / NOVA_FLASH_DURATION) * 0.5
+      ctx.fillStyle = `rgba(224,242,254,${alpha})`
+      ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
+    }
   }
 
   const drawRef = useRef(draw)
@@ -784,7 +945,8 @@ function Starwarden() {
   function start() {
     audio.init()
     gsRef.current = newGame(Math.floor(Math.random() * 1_000_000_000))
-    keysRef.current = { up: false, down: false, left: false, right: false, thrust: false, fire: false }
+    keysRef.current = { up: false, down: false, left: false, right: false, thrust: false, fire: false, nova: false }
+    novaPrevRef.current = false
     setPhase('playing')
   }
 
@@ -843,6 +1005,9 @@ function Starwarden() {
               <span className="sw-dpad-slot" />
             </div>
             <div className="sw-action-pad">
+              <button type="button" className="sw-touch-btn sw-touch-nova" {...bindTouch('nova')}>
+                NOVA
+              </button>
               <button type="button" className="sw-touch-btn sw-touch-thrust" {...bindTouch('thrust')}>
                 THRUST
               </button>
@@ -863,8 +1028,9 @@ function Starwarden() {
             <ul className="sw-controls">
               <li><kbd>&uarr;</kbd>/<kbd>&darr;</kbd> move up / down</li>
               <li><kbd>&larr;</kbd>/<kbd>&rarr;</kbd> face left / right</li>
-              <li><kbd>Space</kbd> engine thrust (uses fuel)</li>
+              <li><kbd>Z</kbd> engine thrust (uses fuel)</li>
               <li><kbd>X</kbd> fire laser (uses a power crystal)</li>
+              <li><kbd>C</kbd> Nova Bomb — clears the screen (recharges over time)</li>
             </ul>
             <p className="sw-touch-hint">On a touchscreen, on-screen controls appear once you launch.</p>
             <button type="button" className="sw-primary" onClick={start}>

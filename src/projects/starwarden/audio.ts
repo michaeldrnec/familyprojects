@@ -165,3 +165,75 @@ export function playGameOver() {
   })
 }
 
+// The Nova Bomb: a big, dramatic layered blast -- a noise boom underneath a
+// rising oscillator sweep, distinctly bigger than a regular explosion so
+// triggering the bonus weapon always reads as a special event.
+export function playNova() {
+  if (!ctx || !masterGain) return
+  const duration = 0.8
+  const noise = ctx.createBufferSource()
+  noise.buffer = makeNoiseBuffer(ctx, duration)
+  const filter = ctx.createBiquadFilter()
+  filter.type = 'lowpass'
+  filter.frequency.setValueAtTime(2400, ctx.currentTime)
+  filter.frequency.exponentialRampToValueAtTime(100, ctx.currentTime + duration)
+  const noiseGain = envGain(ctx, filter, 0.6, 0.01, duration)
+  noise.connect(noiseGain)
+  noiseGain.connect(filter)
+  filter.connect(masterGain)
+  noise.start()
+  noise.stop(ctx.currentTime + duration)
+
+  const osc = ctx.createOscillator()
+  osc.type = 'sawtooth'
+  const oscGain = envGain(ctx, masterGain, 0.3, 0.02, 0.5)
+  osc.frequency.setValueAtTime(80, ctx.currentTime)
+  osc.frequency.exponentialRampToValueAtTime(1200, ctx.currentTime + 0.4)
+  osc.connect(oscGain)
+  osc.start()
+  osc.stop(ctx.currentTime + 0.55)
+}
+
+// A short two-tone klaxon announcing an escalation -- distinct from every
+// other cue so it reads as a warning, not a reward.
+export function playEscalation() {
+  if (!ctx || !masterGain) return
+  const pattern = [660, 440, 660, 440]
+  pattern.forEach((freq, i) => {
+    const osc = ctx!.createOscillator()
+    osc.type = 'square'
+    const start = ctx!.currentTime + i * 0.12
+    const gain = ctx!.createGain()
+    gain.gain.setValueAtTime(0, start)
+    gain.gain.linearRampToValueAtTime(0.18, start + 0.01)
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.1)
+    osc.frequency.value = freq
+    osc.connect(gain)
+    gain.connect(masterGain!)
+    osc.start(start)
+    osc.stop(start + 0.12)
+  })
+}
+
+// A bright ascending sparkle for when the shield finishes its 60s clean-
+// streak regeneration -- distinct from playShieldUp's proximity-triggered
+// activation sweep.
+export function playShieldRegen() {
+  if (!ctx || !masterGain) return
+  const notes = [392, 523.25, 659.25, 783.99] // G4, C5, E5, G5
+  notes.forEach((freq, i) => {
+    const osc = ctx!.createOscillator()
+    osc.type = 'triangle'
+    const start = ctx!.currentTime + i * 0.06
+    const gain = ctx!.createGain()
+    gain.gain.setValueAtTime(0, start)
+    gain.gain.linearRampToValueAtTime(0.18, start + 0.01)
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.2)
+    osc.frequency.value = freq
+    osc.connect(gain)
+    gain.connect(masterGain!)
+    osc.start(start)
+    osc.stop(start + 0.22)
+  })
+}
+

@@ -26,14 +26,18 @@ export const HEALTH_MAX = 3
 export const SHIP_RADIUS = 15
 
 // A collision-imminent shield: arms automatically when a hazard gets this
-// close, absorbs the very next hit for free, then goes on cooldown -- a
-// short reprieve rather than an always-on damage sponge.
+// close and absorbs the very next hit for free. Once used (or once its
+// window expires unused) it starts "charging": a clean streak with no
+// damage taken recharges it, but any hit taken while charging resets the
+// streak back to zero -- so getting the shield back means surviving
+// SHIELD_REGEN_TIME seconds completely unscathed, not just waiting it out.
 export const SHIELD_TRIGGER_RANGE = 70
 export const SHIELD_ACTIVE_DURATION = 0.6
-export const SHIELD_COOLDOWN_USED = 8
-export const SHIELD_COOLDOWN_UNUSED = 2
+export const SHIELD_REGEN_TIME = 60
+// How long the "shield fully charged" flourish plays once regen completes.
+export const SHIELD_FLASH_DURATION = 0.5
 
-export type ShieldState = 'ready' | 'active' | 'cooldown'
+export type ShieldState = 'ready' | 'active' | 'charging'
 
 export interface ShipState {
   worldX: number // position along the wraparound world, 0..WORLD_WIDTH
@@ -45,7 +49,12 @@ export interface ShipState {
   crystals: number
   health: number
   shieldState: ShieldState
+  // While 'active': seconds remaining in the absorb window (counts down).
+  // While 'charging': seconds of clean streak accumulated so far (counts
+  // up toward SHIELD_REGEN_TIME).
   shieldTimer: number
+  // Seconds remaining on the "just finished charging" visual flourish.
+  shieldFlash: number
 }
 
 export interface ShipInput {
@@ -68,6 +77,7 @@ export function initialShip(): ShipState {
     health: HEALTH_MAX,
     shieldState: 'ready',
     shieldTimer: 0,
+    shieldFlash: 0,
   }
 }
 
