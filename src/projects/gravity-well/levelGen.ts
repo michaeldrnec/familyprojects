@@ -1,4 +1,4 @@
-import type { Body, BodyKind } from './physics'
+import type { Alien, Body, BodyKind } from './physics'
 import { simulateTrajectory, velocityFromAngle } from './physics'
 import { makeRng, type Rng } from './rng'
 import type { TierConfig } from './levels'
@@ -9,6 +9,7 @@ export interface Level {
   rocketStart: { x: number; y: number }
   earth: { x: number; y: number; radius: number }
   bodies: Body[]
+  alien?: Alien
 }
 
 // Same power range the UI's drag/keyboard controls expose -- the
@@ -32,6 +33,12 @@ const BODY_RANGES: Record<BodyKind, { radius: [number, number]; mass: [number, n
 
 const ORBIT_RADIUS_RANGE: [number, number] = [30, 70]
 const ORBIT_SPEED_RANGE: [number, number] = [0.3, 0.7]
+
+// Nominal "footprint" radius used only for spacing the alien away from the
+// rocket start, Earth, and every body -- the ship itself has no collision
+// (its beam is the hazard), this just keeps it from spawning on top of
+// something else.
+const ALIEN_FOOTPRINT_RADIUS = 18
 
 interface Placed {
   x: number
@@ -129,7 +136,14 @@ export function generateLevel(tier: TierConfig, seed: number): Level {
     }
   }
 
-  return { name: tier.name, bounds, rocketStart, earth, bodies }
+  let alien: Alien | undefined
+  if (rng.next() < tier.alienChance) {
+    const spot = placeCircle(rng, bounds, ALIEN_FOOTPRINT_RADIUS, tier.minGap, placed)
+    placed.push(spot)
+    alien = { x: spot.x, y: spot.y, beamAngle: Math.atan2(earth.y - spot.y, earth.x - spot.x) }
+  }
+
+  return { name: tier.name, bounds, rocketStart, earth, bodies, alien }
 }
 
 /** Coarse angle/power grid search reusing the exact physics the real flight
@@ -151,6 +165,7 @@ function isSolvable(level: Level): boolean {
         1_000_000, // no need to sample intermediate points during the search
         0,
         SEARCH_MAX_TICKS,
+        level.alien,
       )
       if (result.outcome === 'hit-earth') return true
     }

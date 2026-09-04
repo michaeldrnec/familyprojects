@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+  BEAM_HALF_ANGLE,
+  BEAM_RANGE,
+  MAX_TICKS,
   TICK_DT,
   checkOutcome,
   effectivePosition,
@@ -7,6 +10,7 @@ import {
   stepRocket,
   surfaceDistance,
   velocityFromAngle,
+  type Alien,
   type Body,
   type RocketState,
   type Vec2,
@@ -21,6 +25,11 @@ import './GravityWell.css'
 // player wait out a slow, realistic-speed flight every attempt.
 const TICKS_PER_FRAME = 6
 const CRASH_PAUSE_MS = 900
+// Same cap simulateTrajectory uses -- a safety net so a flight can't run
+// forever if something (most plausibly the alien's tractor beam) drains the
+// rocket's velocity to a near-standstill with nothing else around to
+// perturb it back out.
+const MAX_FLIGHT_SECONDS = MAX_TICKS * TICK_DT
 const DEFAULT_ANGLE = 45
 const DEFAULT_POWER = 150
 const ANGLE_MAX = 359
@@ -263,6 +272,57 @@ function drawBody(ctx: CanvasRenderingContext2D, body: Body, t: number) {
   else drawStar(ctx, renderPos)
 }
 
+// The funnel is drawn straight from BEAM_RANGE/BEAM_HALF_ANGLE -- the exact
+// constants the physics uses -- so the visible danger zone never lies about
+// where the drag actually applies.
+function drawAlien(ctx: CanvasRenderingContext2D, alien: Alien) {
+  const { x, y, beamAngle } = alien
+
+  // Funnel: a pie-slice from the ship out to BEAM_RANGE, brightest near the
+  // source and fading to nothing at the rim.
+  ctx.beginPath()
+  ctx.moveTo(x, y)
+  ctx.arc(x, y, BEAM_RANGE, beamAngle - BEAM_HALF_ANGLE, beamAngle + BEAM_HALF_ANGLE)
+  ctx.closePath()
+  const beamGradient = ctx.createRadialGradient(x, y, 0, x, y, BEAM_RANGE)
+  beamGradient.addColorStop(0, 'rgba(163,230,53,0.55)')
+  beamGradient.addColorStop(0.5, 'rgba(163,230,53,0.22)')
+  beamGradient.addColorStop(1, 'rgba(163,230,53,0)')
+  ctx.fillStyle = beamGradient
+  ctx.fill()
+
+  // Ship: a small saucer with a dome and running lights, facing the beam.
+  ctx.save()
+  ctx.translate(x, y)
+  ctx.rotate(beamAngle)
+
+  ctx.beginPath()
+  ctx.ellipse(0, 0, 15, 6, 0, 0, Math.PI * 2)
+  const hullGradient = ctx.createLinearGradient(0, -6, 0, 6)
+  hullGradient.addColorStop(0, '#a1a8b3')
+  hullGradient.addColorStop(1, '#4b5563')
+  ctx.fillStyle = hullGradient
+  ctx.fill()
+  ctx.strokeStyle = '#d1d5db'
+  ctx.lineWidth = 1
+  ctx.stroke()
+
+  ctx.beginPath()
+  ctx.arc(0, -2, 7, Math.PI, Math.PI * 2)
+  ctx.fillStyle = 'rgba(163,230,53,0.9)'
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(190,242,100,0.9)'
+  ctx.stroke()
+
+  ctx.fillStyle = '#fde047'
+  for (const lx of [-9, 0, 9]) {
+    ctx.beginPath()
+    ctx.arc(lx, 3, 1.4, 0, Math.PI * 2)
+    ctx.fill()
+  }
+  ctx.restore()
+}
+
 function GravityWell() {
   const [levelIndex, setLevelIndex] = useState(0)
   const [runSeed, setRunSeed] = useState(() => Math.floor(Math.random() * 1_000_000_000))
@@ -370,12 +430,24 @@ function GravityWell() {
     // Bodies (at their current, possibly orbiting, position)
     for (const body of level.bodies) drawBody(ctx, body, t)
 
+    if (level.alien) drawAlien(ctx, level.alien)
+
     // Trajectory preview -- recomputed every frame off the current angle,
     // power, and the bodies' current orbital phase, so it never lies about
     // "if I launched right now."
     if (phase === 'aiming' && showPreview) {
       const vel = velocityFromAngle(angle, power)
-      const preview = simulateTrajectory(level.rocketStart, vel, level.bodies, level.earth, level.bounds, 4, t)
+      const preview = simulateTrajectory(
+        level.rocketStart,
+        vel,
+        level.bodies,
+        level.earth,
+        level.bounds,
+        4,
+        t,
+        undefined,
+        level.alien,
+      )
       ctx.setLineDash([5, 6])
       ctx.strokeStyle = 'rgba(96, 165, 250, 0.8)'
       ctx.lineWidth = 2
@@ -623,7 +695,7 @@ function GravityWell() {
       for (let i = 0; i < TICKS_PER_FRAME; i++) {
         flightElapsed += TICK_DT
         const t = startWorldTime + flightElapsed
-        rocketRef.current = stepRocket(rocketRef.current, activeLevel.bodies, TICK_DT, t)
+        rocketRef.current = stepRocket(rocketRef.current, activeLevel.bodies, TICK_DT, t, activeLevel.alien)
         clockRef.current = t
         trailRef.current.push(rocketRef.current.pos)
         activeLevel.bodies.forEach((body, bi) => {
@@ -631,7 +703,8 @@ function GravityWell() {
           if (d < closestApproachRef.current[bi]) closestApproachRef.current[bi] = d
         })
         const outcome = checkOutcome(rocketRef.current.pos, activeLevel.bodies, activeLevel.earth, activeLevel.bounds, t)
-        if (outcome !== 'flying') {
+        const strandedTimeout = flightElapsed >= MAX_FLIGHT_SECONDS
+        if (outcome !== 'flying' || strandedTimeout) {
           drawRef.current()
           if (outcome === 'hit-earth') {
             const result = scoreLanding(activeLevel.bodies, closestApproachRef.current)

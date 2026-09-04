@@ -37,6 +37,23 @@ export interface Target {
   radius: number
 }
 
+/** A stationary alien ship with a fixed tractor-beam funnel -- `beamAngle`
+ * is set once at generation time (aimed at Earth's position then) and never
+ * changes. The beam has no mass/gravity and doesn't crash the rocket on
+ * contact; it only saps velocity (see `beamStrengthAt`/`stepRocket`). */
+export interface Alien {
+  x: number
+  y: number
+  beamAngle: number // radians, direction the funnel opens toward
+}
+
+/** How far the tractor beam's funnel reaches, and how wide (half-angle from
+ * its centerline) -- exported so the renderer draws exactly the zone the
+ * physics uses, not an approximation of it. */
+export const BEAM_RANGE = 300
+export const BEAM_HALF_ANGLE = (20 * Math.PI) / 180
+const BEAM_DRAG_COEFF = 14 // tuned so a close pass drains speed hard within a fraction of a second
+
 export interface Bounds {
   width: number
   height: number
@@ -64,7 +81,12 @@ export const TICK_DT = 1 / 120
 
 export const ROCKET_RADIUS = 4
 const OUT_OF_BOUNDS_MARGIN = 100
-const MAX_TICKS = 2400 // 20s of simulated flight at TICK_DT
+// 20s of simulated flight at TICK_DT -- shared between the preview/search
+// simulation below and the live flight loop's own stuck-flight timeout
+// (GravityWell.tsx), so a flight can't run forever if something (e.g. a
+// tractor beam) drains its velocity to a near-standstill with nothing else
+// around to perturb it back out.
+export const MAX_TICKS = 2400
 
 export function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
@@ -111,11 +133,44 @@ export function accelerationAt(pos: Vec2, bodies: Body[], t = 0): Vec2 {
   return { x: ax, y: ay }
 }
 
+/** 0 outside the funnel (or beyond BEAM_RANGE), rising to 1 right at the
+ * alien and dead-center of the beam -- the product of a radial falloff
+ * (distance to the alien) and an angular falloff (how far off the beam's
+ * centerline), which is what gives it its "funnel" shape: wide and weak at
+ * the mouth, narrow and strong at the source. */
+export function beamStrengthAt(pos: Vec2, alien: Alien): number {
+  const dx = pos.x - alien.x
+  const dy = pos.y - alien.y
+  const dist = Math.hypot(dx, dy)
+  if (dist > BEAM_RANGE || dist < 1e-6) return 0
+  const angleToPoint = Math.atan2(dy, dx)
+  const diff = Math.atan2(Math.sin(angleToPoint - alien.beamAngle), Math.cos(angleToPoint - alien.beamAngle))
+  if (Math.abs(diff) > BEAM_HALF_ANGLE) return 0
+  const radial = 1 - dist / BEAM_RANGE
+  const angular = 1 - Math.abs(diff) / BEAM_HALF_ANGLE
+  return radial * angular
+}
+
 /** Advance the rocket by one fixed tick (semi-implicit Euler: velocity first,
- * then position), using the gravity field as it is at time `t`. */
-export function stepRocket(state: RocketState, bodies: Body[], dt: number, t = 0): RocketState {
+ * then position), using the gravity field as it is at time `t`. An alien's
+ * tractor beam, if present and in range, damps velocity afterward -- it's a
+ * drag effect, not a force, so it doesn't feed back into the gravity math. */
+export function stepRocket(
+  state: RocketState,
+  bodies: Body[],
+  dt: number,
+  t = 0,
+  alien?: Alien,
+): RocketState {
   const acc = accelerationAt(state.pos, bodies, t)
-  const vel = { x: state.vel.x + acc.x * dt, y: state.vel.y + acc.y * dt }
+  let vel = { x: state.vel.x + acc.x * dt, y: state.vel.y + acc.y * dt }
+  if (alien) {
+    const strength = beamStrengthAt(state.pos, alien)
+    if (strength > 0) {
+      const damping = Math.max(0, 1 - BEAM_DRAG_COEFF * strength * dt)
+      vel = { x: vel.x * damping, y: vel.y * damping }
+    }
+  }
   const pos = { x: state.pos.x + vel.x * dt, y: state.pos.y + vel.y * dt }
   return { pos, vel }
 }
@@ -159,12 +214,13 @@ export function simulateTrajectory(
   sampleEvery = 1,
   t0 = 0,
   maxTicks = MAX_TICKS,
+  alien?: Alien,
 ): TrajectoryResult {
   let state: RocketState = { pos: { ...start }, vel: { ...vel } }
   const points: Vec2[] = [state.pos]
   for (let tick = 1; tick <= maxTicks; tick++) {
     const t = t0 + tick * TICK_DT
-    state = stepRocket(state, bodies, TICK_DT, t)
+    state = stepRocket(state, bodies, TICK_DT, t, alien)
     const outcome = checkOutcome(state.pos, bodies, earth, bounds, t)
     if (tick % sampleEvery === 0 || outcome !== 'flying') points.push(state.pos)
     if (outcome !== 'flying') return { points, outcome }

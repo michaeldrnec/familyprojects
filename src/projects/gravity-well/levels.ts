@@ -14,12 +14,18 @@ export interface TierConfig {
   /** How many of this tier's bodies orbit a fixed point instead of sitting
    * still. 0 for early tiers; ramps up from the "moving" tier onward. */
   movingCount: number
+  /** Independent chance (0..1) this tier includes a tractor-beam alien. */
+  alienChance: number
 }
 
 const BOUNDS = { width: 800, height: 600 }
 
 /** Levels 10+ (index 9+) introduce orbiting bodies, per the user's request. */
 const MOVING_FROM_TIER = 9
+
+/** Levels 4+ (index 3+) can randomly include an alien, per the user's request. */
+const ALIEN_FROM_TIER = 3
+const ALIEN_CHANCE = 0.4
 
 function moversFor(tierIndex: number, totalBodies: number): number {
   if (tierIndex < MOVING_FROM_TIER) return 0
@@ -84,4 +90,5 @@ export const TIERS: TierConfig[] = BODY_PROGRESSION.map(({ name, counts, minGap,
   bodyCounts: counts,
   minGap,
   movingCount: moving ?? moversFor(i, totalOf(counts)),
+  alienChance: i >= ALIEN_FROM_TIER ? ALIEN_CHANCE : 0,
 }))
