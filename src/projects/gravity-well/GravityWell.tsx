@@ -18,6 +18,7 @@ import {
 import { TIERS } from './levels'
 import { generateSolvableLevel, type Level } from './levelGen'
 import { scoreLanding, type LevelScore } from './scoring'
+import * as audio from './audio'
 import './GravityWell.css'
 
 // Playback runs faster than real-time (a full simulated flight can be many
@@ -344,6 +345,7 @@ function GravityWell() {
   // progress row above it can match that width and right-align flush with
   // the canvas's real right edge instead of the far edge of the page.
   const [canvasWidth, setCanvasWidth] = useState<number | null>(null)
+  const [muted, setMuted] = useState(false)
 
   const totalScore = levelScores.reduce((sum, s) => sum + (s?.total ?? 0), 0)
   const finished = levelIndex >= TIERS.length
@@ -682,6 +684,8 @@ function GravityWell() {
 
   function launch() {
     if (!level || phase !== 'aiming') return
+    audio.init()
+    audio.playLaunch()
     const activeLevel = level
     const vel = velocityFromAngle(angle, power)
     const startWorldTime = worldTimeRef.current
@@ -707,6 +711,7 @@ function GravityWell() {
         if (outcome !== 'flying' || strandedTimeout) {
           drawRef.current()
           if (outcome === 'hit-earth') {
+            audio.playWin()
             const result = scoreLanding(activeLevel.bodies, closestApproachRef.current)
             const existingBest = levelScores[levelIndex]
             const newBest = !existingBest || result.total > existingBest.total
@@ -721,6 +726,7 @@ function GravityWell() {
             }
             setPhase('won')
           } else {
+            audio.playCrash()
             setPhase('crashed')
             setTimeout(resetAim, CRASH_PAUSE_MS)
           }
@@ -734,6 +740,7 @@ function GravityWell() {
   }
 
   function nextLevel() {
+    audio.playClick()
     setLevelIndex((i) => i + 1)
     setAngle(DEFAULT_ANGLE)
     setPower(DEFAULT_POWER)
@@ -745,6 +752,7 @@ function GravityWell() {
   // will ever replace it), keeps the current angle/power, and reuses the
   // exact same generated layout (see the level-cache effect above).
   function retryLevel() {
+    audio.playClick()
     if (level) rocketRef.current = { pos: { ...level.rocketStart }, vel: { x: 0, y: 0 } }
     trailRef.current = []
     setLastResult(null)
@@ -752,6 +760,7 @@ function GravityWell() {
   }
 
   function restart() {
+    audio.playClick()
     setLevelIndex(0)
     setRunSeed(Math.floor(Math.random() * 1_000_000_000))
     setAngle(DEFAULT_ANGLE)
@@ -761,8 +770,19 @@ function GravityWell() {
     levelCacheRef.current.clear()
   }
 
+  function toggleMute() {
+    audio.init()
+    const next = !muted
+    audio.setMuted(next)
+    setMuted(next)
+  }
+
   return (
     <div className="gravity-well fullscreen">
+      <button type="button" className="gw-mute" onClick={toggleMute} aria-label={muted ? 'Unmute sound' : 'Mute sound'}>
+        {muted ? '🔇' : '🔊'}
+      </button>
+
       {finished ? (
         <div className="results">
           <p className="score">🎉 You made it home through all {TIERS.length} levels!</p>

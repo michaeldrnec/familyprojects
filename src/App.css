@@ -45,7 +45,9 @@
  * visible without scrolling -- see GravityWell.css for the flex layout
  * that fills this space. */
 .site-main:has(> .gravity-well.fullscreen),
-.site-main:has(> .starwarden.fullscreen) {
+.site-main:has(> .starwarden.fullscreen),
+.site-main:has(> .solar-ward.fullscreen),
+.site-main:has(> .ion-perimeter.fullscreen) {
   max-width: none;
   padding: 0;
   display: flex;

@@ -1,0 +1,109 @@
+.solar-ward.fullscreen {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  padding: 6px 20px 10px;
+}
+
+.solar-ward .sw2-game-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.solar-ward .sw2-canvas {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: 100%;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: #03040a;
+}
+
+.solar-ward .sw2-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  background: rgba(3, 4, 10, 0.82);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.solar-ward .sw2-overlay h1 {
+  margin: 0;
+  color: var(--text-h);
+}
+
+.solar-ward .sw2-tagline {
+  color: var(--text-h);
+  opacity: 0.85;
+  max-width: 460px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.solar-ward .sw2-dim {
+  opacity: 0.6;
+  font-size: 13px;
+}
+
+.solar-ward .sw2-new-best {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.solar-ward .sw2-controls {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--text-h);
+  opacity: 0.9;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.solar-ward .sw2-controls kbd {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+}
+
+.solar-ward .sw2-primary {
+  background: var(--accent);
+  color: #05070f;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.solar-ward .sw2-mute {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  background: rgba(3, 4, 10, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}

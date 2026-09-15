@@ -50,4 +50,14 @@ export const projects: Project[] = [
     title: 'Starwarden',
     description: 'Hold the line in a scrolling alien warzone — survive as long as fuel and power crystals last.',
   },
+  {
+    slug: 'solar-ward',
+    title: 'Solar Ward',
+    description: 'Orbit a dying star and intercept photon beams and diving fighters before they reach the core.',
+  },
+  {
+    slug: 'ion-perimeter',
+    title: 'Ion Perimeter',
+    description: 'Build and upgrade weapon platforms along a space lane to hold your outpost core for 20 waves.',
+  },
 ]

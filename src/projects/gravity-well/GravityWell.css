@@ -1,17 +1,33 @@
 /* The game fills the viewport below the site header instead of sitting in
  * the normal, width-capped article column -- see the `:has()` override in
  * App.css that widens `.site-main` for this page. The game's own title/logo
- * now lives in the site header (Layout.tsx), so this page starts straight
- * at the progress line. Everything here keeps its natural height except
+ * lives in the site header (Layout.tsx), so this page starts straight at
+ * the progress line. Everything here keeps its natural height except
  * `.game-area`, the one flexible region that soaks up whatever space is
  * left, so the canvas is always fully visible without scrolling the page. */
 .gravity-well.fullscreen {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
   gap: 2px;
   padding: 6px 20px 10px;
+}
+
+.gravity-well .gw-mute {
+  position: absolute;
+  top: 8px;
+  right: 20px;
+  z-index: 2;
+  background: rgba(3, 4, 10, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
 }
 
 /* Sized (via canvasWidth, tracked with a ResizeObserver in the component)

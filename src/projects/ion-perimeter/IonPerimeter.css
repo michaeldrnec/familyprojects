@@ -1,0 +1,480 @@
+/* Fills the viewport below the site header, matching the pattern every
+ * other canvas game in this repo uses -- see the `:has()` override in
+ * App.css that widens `.site-main` for this page. */
+.ion-perimeter.fullscreen {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 6px 20px 10px;
+  box-sizing: border-box;
+}
+
+.ion-perimeter .ip-game-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* A fixed-aspect box matching the canvas's own resolution exactly, so every
+ * HUD/overlay child positioned against ITS edges (not .ip-game-area's)
+ * always hugs the canvas's real edges -- whether the viewport ends up
+ * height-constrained (typical desktop, empty space left/right) or
+ * width-constrained (typical mobile portrait, empty space above/below). */
+.ion-perimeter .ip-canvas-wrap {
+  position: relative;
+  aspect-ratio: 1000 / 640;
+  max-width: 100%;
+  max-height: 100%;
+  width: 100%;
+}
+
+.ion-perimeter .ip-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: #05070f;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.ion-perimeter .ip-canvas.targeting {
+  cursor: crosshair;
+}
+
+.ion-perimeter .ip-mute {
+  position: absolute;
+  top: 8px;
+  right: 20px;
+  z-index: 3;
+  background: rgba(3, 4, 10, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* --- Top HUD: credits, core integrity, wave, score, pause/speed. --- */
+.ion-perimeter .ip-hud-top {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 52px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(3, 4, 10, 0.72);
+  border: 1px solid var(--border);
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 700;
+  flex-wrap: wrap;
+}
+
+.ion-perimeter .ip-hud-stat {
+  white-space: nowrap;
+}
+
+.ion-perimeter .ip-credits {
+  color: #fbbf24;
+}
+
+.ion-perimeter .ip-score {
+  color: var(--accent);
+  margin-left: auto;
+}
+
+.ion-perimeter .ip-hud-core {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ion-perimeter .ip-hud-core-label {
+  opacity: 0.7;
+  font-weight: 400;
+}
+
+.ion-perimeter .ip-core-bar {
+  width: 90px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.ion-perimeter .ip-core-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4cd3ff, #67e8f9);
+  transition: width 0.2s ease;
+}
+
+.ion-perimeter .ip-hud-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.ion-perimeter .ip-hud-buttons button {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-h);
+  padding: 3px 9px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ion-perimeter .ip-hud-buttons button:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* --- Bottom shop bar: one button per unlocked tower type. --- */
+.ion-perimeter .ip-shop-bar {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  right: 8px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(3, 4, 10, 0.78);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.ion-perimeter .ip-shop-btn {
+  flex: 1 1 0;
+  min-width: 84px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-h);
+  cursor: pointer;
+  position: relative;
+}
+
+.ion-perimeter .ip-shop-btn.selected {
+  background: rgba(76, 175, 63, 0.22);
+  border-color: var(--accent);
+}
+
+.ion-perimeter .ip-shop-btn.locked {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.ion-perimeter .ip-shop-btn:disabled {
+  cursor: default;
+}
+
+.ion-perimeter .ip-shop-key {
+  position: absolute;
+  top: 3px;
+  left: 5px;
+  font-size: 10px;
+  opacity: 0.55;
+}
+
+.ion-perimeter .ip-shop-name {
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ion-perimeter .ip-shop-cost {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+/* --- Tower panel: appears when a placed tower is selected. --- */
+.ion-perimeter .ip-tower-panel {
+  position: absolute;
+  top: 56px;
+  right: 8px;
+  z-index: 2;
+  width: 220px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(3, 4, 10, 0.85);
+  border: 1px solid var(--border);
+  color: var(--text-h);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ion-perimeter .ip-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.ion-perimeter .ip-panel-tier {
+  font-size: 11px;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.ion-perimeter .ip-panel-stats {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  opacity: 0.85;
+}
+
+.ion-perimeter .ip-panel-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ion-perimeter .ip-panel-upgrade,
+.ion-perimeter .ip-panel-sell,
+.ion-perimeter .ip-branch-choice button {
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ion-perimeter .ip-panel-upgrade {
+  background: var(--accent-bg);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+}
+
+.ion-perimeter .ip-panel-upgrade:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ion-perimeter .ip-branch-choice {
+  display: flex;
+  gap: 6px;
+}
+
+.ion-perimeter .ip-branch-choice button {
+  flex: 1;
+  background: rgba(96, 165, 250, 0.14);
+  border: 1px solid rgba(96, 165, 250, 0.5);
+  color: var(--text-h);
+}
+
+.ion-perimeter .ip-branch-choice button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.ion-perimeter .ip-panel-sell {
+  background: var(--bad-bg);
+  border: 1px solid var(--bad);
+  color: var(--bad);
+}
+
+/* --- Banners: boss warning, wave-cleared summary. --- */
+.ion-perimeter .ip-banner {
+  position: absolute;
+  top: 56px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ion-perimeter .ip-boss-warning {
+  background: var(--bad-bg);
+  border: 1px solid var(--bad);
+  color: var(--bad);
+  animation: ip-pulse 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes ip-pulse {
+  from {
+    opacity: 0.75;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ion-perimeter .ip-wave-cleared {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  white-space: normal;
+  background: var(--good-bg);
+  border: 1px solid var(--good);
+  color: var(--good);
+}
+
+.ion-perimeter .ip-wave-cleared button {
+  padding: 5px 14px;
+  border-radius: 6px;
+  border: 1px solid var(--good);
+  background: transparent;
+  color: var(--good);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* --- Full-screen overlays: paused, start, game-over/victory. --- */
+.ion-perimeter .ip-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  background: rgba(3, 4, 10, 0.86);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.ion-perimeter .ip-overlay h1,
+.ion-perimeter .ip-overlay h2 {
+  margin: 0;
+  color: var(--text-h);
+}
+
+.ion-perimeter .ip-tagline {
+  color: var(--text-h);
+  opacity: 0.85;
+  max-width: 480px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.ion-perimeter .ip-best {
+  color: var(--text-h);
+  opacity: 0.7;
+  font-size: 13px;
+  margin: 0;
+}
+
+.ion-perimeter .ip-new-best {
+  color: var(--accent);
+  font-weight: 700;
+  margin: 0;
+}
+
+.ion-perimeter .ip-controls-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--text-h);
+  opacity: 0.9;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.ion-perimeter .ip-controls-list kbd {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 11px;
+}
+
+.ion-perimeter .ip-primary {
+  background: var(--accent);
+  color: #05070f;
+  border: none;
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Larger, more thumb-friendly touch targets on coarse-pointer (touch)
+ * devices -- the same convention starwarden's CSS uses -- since the shop
+ * bar and tower panel are the primary controls, not an accessory. */
+@media (pointer: coarse), (hover: none) {
+  .ion-perimeter .ip-shop-btn {
+    min-width: 72px;
+    padding: 8px 4px;
+  }
+
+  .ion-perimeter .ip-shop-name {
+    font-size: 11px;
+  }
+
+  .ion-perimeter .ip-tower-panel {
+    width: min(260px, calc(100% - 16px));
+  }
+
+  .ion-perimeter .ip-hud-top {
+    font-size: 12px;
+    gap: 10px;
+  }
+
+  .ion-perimeter .ip-core-bar {
+    width: 60px;
+  }
+}
+
+.ion-perimeter .ip-rotate-hint {
+  display: none;
+}
+
+/* The 1000x640 map is landscape-shaped like the lane it depicts, so a
+ * narrow phone held upright letterboxes the whole game down to a thin
+ * strip. Nothing to fix in layout terms -- .ip-canvas-wrap already keeps
+ * every control correctly hugging that strip's real edges -- so this is
+ * just a nudge toward the much roomier landscape view, shown only when
+ * it's actually relevant (a touch device in portrait). */
+@media (pointer: coarse) and (orientation: portrait) {
+  .ion-perimeter .ip-rotate-hint {
+    display: block;
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    right: 8px;
+    z-index: 4;
+    margin: 0;
+    padding: 5px 10px;
+    border-radius: 8px;
+    background: rgba(3, 4, 10, 0.85);
+    border: 1px solid var(--border);
+    color: var(--text-h);
+    opacity: 0.85;
+    font-size: 11px;
+    text-align: center;
+  }
+}
