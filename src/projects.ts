@@ -60,4 +60,9 @@ export const projects: Project[] = [
     title: 'Ion Perimeter',
     description: 'Build and upgrade weapon platforms along a space lane to hold your outpost core for 20 waves.',
   },
+  {
+    slug: 'scrapyard-ballistics',
+    title: 'Scrapyard Ballistics',
+    description: 'Bolt a rocket together from lawn mower engines and soda kegs, wire the staging, and fly it to orbit.',
+  },
 ]

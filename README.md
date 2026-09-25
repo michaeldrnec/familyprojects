@@ -10,6 +10,9 @@ for routing.
 - **Letter Ladder** (`/letter-ladder`) — classic word-ladder puzzle: get from
   the start word to the end word, changing one letter at a time, with every
   intermediate step a real word.
+- **Scrapyard Ballistics** (`/scrapyard-ballistics`) — build a rocket from junk
+  on a blueprint grid, wire its staging, and fly it by hand through Max-Q and
+  flaky hardware toward orbit. Uses Matter.js for the rig's internal physics.
 
 ## Development
 

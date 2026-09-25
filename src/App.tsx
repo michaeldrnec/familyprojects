@@ -17,6 +17,9 @@ import IonPerimeter from './projects/ion-perimeter/IonPerimeter'
 // validation) that would otherwise bloat every route's initial load, so
 // it's code-split into its own chunk, fetched only when this route is hit.
 const SentenceSpin = lazy(() => import('./projects/sentence-spin/SentenceSpin'))
+// Scrapyard Ballistics is the only project pulling in a physics engine
+// (matter-js), so it gets the same code-split treatment.
+const ScrapyardBallistics = lazy(() => import('./projects/scrapyard-ballistics/ScrapyardBallistics'))
 
 function App() {
   return (
@@ -33,6 +36,14 @@ function App() {
         <Route path="/starwarden" element={<Starwarden />} />
         <Route path="/solar-ward" element={<SolarWard />} />
         <Route path="/ion-perimeter" element={<IonPerimeter />} />
+        <Route
+          path="/scrapyard-ballistics"
+          element={
+            <Suspense fallback={<p>Loading…</p>}>
+              <ScrapyardBallistics />
+            </Suspense>
+          }
+        />
         <Route
           path="/sentence-spin"
           element={
