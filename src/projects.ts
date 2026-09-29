@@ -65,4 +65,9 @@ export const projects: Project[] = [
     title: 'Scrapyard Ballistics',
     description: 'Bolt a rocket together from lawn mower engines and soda kegs, wire the staging, and fly it to orbit.',
   },
+  {
+    slug: 'feline-ballistics',
+    title: 'Feline Ballistics',
+    description: 'It’s 3 AM. Fling squishy, liquid cats to knock the humans’ precious things off every shelf.',
+  },
 ]

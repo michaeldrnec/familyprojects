@@ -1,0 +1,107 @@
+// Kitchen (SPEC.md section 6): the Orange Tabby's room. Ceramic, glass
+// and spice racks; teaches aiming, bank shots, tail swish and claw grip.
+import type { LevelDef } from './types'
+import { FY, PERCH, obj, precious, shelfWith, stack } from './prefabs'
+
+const COUNTER_TOP = FY - 180
+
+export const KITCHEN: LevelDef[] = [
+  {
+    id: 'kitchen-1',
+    room: 'kitchen',
+    index: 1,
+    title: 'First Pounce',
+    width: 1800,
+    height: 1000,
+    perch: PERCH,
+    lineup: ['tabby', 'tabby', 'tabby'],
+    stars: [0, 11250, 16000],
+    coach: [
+      'Drag back anywhere, then let go to POUNCE.',
+      'Knock every ✨sparkling✨ thing off its perch before the alarm rings.',
+    ],
+    objects: [
+      obj('counter', 1150, FY),
+      ...stack(1150, COUNTER_TOP, ['mug', 'plate', 'mug', 'plate', precious('mugWorld')]),
+      obj('bowl', 1050, COUNTER_TOP),
+      obj('jar', 1250, COUNTER_TOP),
+    ],
+  },
+  {
+    id: 'kitchen-2',
+    room: 'kitchen',
+    index: 2,
+    title: 'Fridge Ricochet',
+    width: 1800,
+    height: 1000,
+    perch: PERCH,
+    lineup: ['tabby', 'tabby', 'tabby'],
+    stars: [0, 9500, 13750],
+    coach: ['Tabbies bounce off hard things at wild angles. Use the fridge!'],
+    objects: [
+      obj('fridge', 820, FY),
+      obj('counter', 1400, FY),
+      ...stack(1300, COUNTER_TOP, ['plate', 'mug', 'plate', 'mug']),
+      obj('jar', 1420, COUNTER_TOP, { precious: true }),
+      obj('teapot', 1500, COUNTER_TOP),
+      ...shelfWith(1420, 560, 220, ['bowl', 'bowl', 'spiceJar']),
+    ],
+  },
+  {
+    id: 'kitchen-3',
+    room: 'kitchen',
+    index: 3,
+    title: 'Top Shelf',
+    width: 1800,
+    height: 1000,
+    perch: PERCH,
+    lineup: ['tabby', 'tabby', 'tabby'],
+    stars: [0, 9500, 13750],
+    coach: ['Swipe mid-air to flick your tail and nudge your path. Swipe UP to floof-glide.'],
+    objects: [
+      obj('counter', 1250, FY),
+      ...stack(1180, COUNTER_TOP, ['mug', 'plate', 'mug']),
+      obj('vase', 1320, COUNTER_TOP, { precious: true }),
+      ...shelfWith(1420, 420, 220, ['spiceJar', precious('jar'), 'spiceJar', 'spiceJar']),
+    ],
+  },
+  {
+    id: 'kitchen-4',
+    room: 'kitchen',
+    index: 4,
+    title: 'Dish Towel Swing',
+    width: 1800,
+    height: 1000,
+    perch: PERCH,
+    lineup: ['tabby', 'tabby', 'tabby'],
+    stars: [0, 7250, 10500],
+    coach: ['HOLD while touching the dish towel to dig in your claws. Let go to fling off it.'],
+    objects: [
+      obj('towel', 760, 560),
+      obj('counter', 1420, FY),
+      ...stack(1380, COUNTER_TOP, ['mug', 'mug']),
+      ...shelfWith(1260, 360, 220, ['bowl', precious('vase'), 'bowl']),
+      obj('teapot', 1500, COUNTER_TOP, { precious: true }),
+    ],
+  },
+  {
+    id: 'kitchen-5',
+    room: 'kitchen',
+    index: 5,
+    title: 'Spice Avalanche',
+    width: 2100,
+    height: 1000,
+    perch: PERCH,
+    lineup: ['tabby', 'tabby', 'tabby', 'tabby'],
+    stars: [0, 12250, 17500],
+    objects: [
+      obj('counter', 1500, FY),
+      ...shelfWith(1500, 640, 240, ['spiceJar', 'spiceJar', 'spiceJar', 'spiceJar', 'spiceJar']),
+      ...shelfWith(1500, 520, 240, ['spiceJar', 'spiceJar', precious('jar'), 'spiceJar', 'spiceJar']),
+      ...shelfWith(1500, 400, 240, ['bowl', precious('teapot'), 'bowl']),
+      ...stack(1420, COUNTER_TOP, ['cuttingBoard', 'plate', 'plate', 'mug']),
+      obj('jar', 1600, COUNTER_TOP, { precious: true }),
+      obj('fridge', 1860, FY),
+    ],
+  },
+]

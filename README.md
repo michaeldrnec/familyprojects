@@ -13,6 +13,9 @@ for routing.
 - **Scrapyard Ballistics** (`/scrapyard-ballistics`) — build a rocket from junk
   on a blueprint grid, wire its staging, and fly it by hand through Max-Q and
   flaky hardware toward orbit. Uses Matter.js for the rig's internal physics.
+- **Feline Ballistics** (`/feline-ballistics`) — a 3 AM physics puzzler: fling
+  soft-body "liquid" cats (Tabby, Maine Coon, Siamese, Calico) to knock precious
+  things off shelves across 20 levels in 4 rooms. Matter.js soft bodies.
 
 ## Development
 

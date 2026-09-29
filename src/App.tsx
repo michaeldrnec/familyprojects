@@ -20,6 +20,9 @@ const SentenceSpin = lazy(() => import('./projects/sentence-spin/SentenceSpin'))
 // Scrapyard Ballistics is the only project pulling in a physics engine
 // (matter-js), so it gets the same code-split treatment.
 const ScrapyardBallistics = lazy(() => import('./projects/scrapyard-ballistics/ScrapyardBallistics'))
+// Feline Ballistics also uses matter-js; the physics code lands in a chunk
+// shared with Scrapyard rather than the main bundle.
+const FelineBallistics = lazy(() => import('./projects/feline-ballistics/FelineBallistics'))
 
 function App() {
   return (
@@ -41,6 +44,14 @@ function App() {
           element={
             <Suspense fallback={<p>Loading…</p>}>
               <ScrapyardBallistics />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/feline-ballistics"
+          element={
+            <Suspense fallback={<p>Loading…</p>}>
+              <FelineBallistics />
             </Suspense>
           }
         />

@@ -48,7 +48,8 @@
 .site-main:has(> .starwarden.fullscreen),
 .site-main:has(> .solar-ward.fullscreen),
 .site-main:has(> .ion-perimeter.fullscreen),
-.site-main:has(> .scrapyard-ballistics.fullscreen) {
+.site-main:has(> .scrapyard-ballistics.fullscreen),
+.site-main:has(> .feline-ballistics.fullscreen) {
   max-width: none;
   padding: 0;
   display: flex;
