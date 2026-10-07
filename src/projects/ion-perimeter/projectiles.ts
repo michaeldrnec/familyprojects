@@ -20,7 +20,11 @@ export interface Projectile {
   ignoresArmor: boolean
   color: string
   radius: number
+  style: ProjectileStyle
 }
+
+// bolt = Pulse Cannon slug, heavy = Overcharged Round, shell = Flak
+export type ProjectileStyle = 'bolt' | 'heavy' | 'shell'
 
 export interface ProjectileImpact {
   x: number
@@ -43,6 +47,7 @@ export function fireProjectile(
   splashRadius: number,
   ignoresArmor: boolean,
   color: string,
+  style: ProjectileStyle = 'bolt',
 ): Projectile {
   const dx = aimX - fromX
   const dy = aimY - fromY
@@ -60,7 +65,8 @@ export function fireProjectile(
     splashRadius,
     ignoresArmor,
     color,
-    radius: splashRadius > 0 ? 4 : 3,
+    radius: style === 'heavy' ? 5 : splashRadius > 0 ? 4 : 3,
+    style,
   }
 }
 
@@ -124,9 +130,14 @@ export interface BeamFx {
   x2: number
   y2: number
   color: string
+  width: number
+  style: BeamStyle
   life: number
   maxLife: number
 }
+
+// lance = Laser Lance, phase/focus = its branches, rail = Railgun
+export type BeamStyle = 'lance' | 'phase' | 'focus' | 'rail'
 
 export interface ChainFx {
   id: number

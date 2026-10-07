@@ -26,16 +26,16 @@ export interface Pad {
 
 // A 3-row boustrophedon (zigzag) lane: enters off-screen left, sweeps right,
 // drops a row, sweeps left, drops a row, sweeps right into the core. Always
-// monotonic within a row, so it never crosses itself and pads can be offset
-// a fixed perpendicular distance from each segment without colliding with
-// an unrelated part of the lane.
+// monotonic within a row, so it never crosses itself. Rows are spaced 170px
+// apart so a pad can sit on the midline between two rows (85px from each,
+// well clear of the lane's glow) and cover both passes.
 export const WAYPOINTS: Point[] = [
-  { x: -40, y: 140 },
-  { x: 760, y: 140 },
-  { x: 760, y: 320 },
-  { x: 280, y: 320 },
-  { x: 280, y: 460 },
-  { x: 940, y: 460 },
+  { x: -40, y: 130 },
+  { x: 780, y: 130 },
+  { x: 780, y: 300 },
+  { x: 260, y: 300 },
+  { x: 260, y: 470 },
+  { x: 920, y: 470 },
 ]
 
 // The final waypoint doubles as the outpost core's position -- an enemy
@@ -78,31 +78,22 @@ export function buildPathSampler(waypoints: Point[]): PathSampler {
 
 export const PATH = buildPathSampler(WAYPOINTS)
 
-// Generates a mirrored pair of pads at fixed distances along one straight
-// segment, offset a fixed perpendicular distance to either side -- see the
-// header comment for why a hand-placed layout beats a generic grid here.
-function segmentPads(from: Point, to: Point, distances: number[], offset: number, idPrefix: string): Pad[] {
-  const dx = to.x - from.x
-  const dy = to.y - from.y
-  const len = Math.hypot(dx, dy)
-  const ux = len ? dx / len : 0
-  const uy = len ? dy / len : 0
-  const px = -uy
-  const py = ux
-  const pads: Pad[] = []
-  distances.forEach((d, i) => {
-    const bx = from.x + ux * d
-    const by = from.y + uy * d
-    pads.push({ id: `${idPrefix}-${i}a`, x: bx + px * offset, y: by + py * offset })
-    pads.push({ id: `${idPrefix}-${i}b`, x: bx - px * offset, y: by - py * offset })
-  })
-  return pads
+// Hand-placed pads. Every pad keeps >= 50px from the lane centerline (the
+// lane's glow is 24px either side, a max-tier tower ~22px), >= 56px from
+// every other pad, and stays clear of the HUD (top) and shop bar, which
+// covers roughly y > 525 -- so nothing sits below the last lane pass. The
+// midline rows between lane passes are the contested "double coverage"
+// spots; the outer pads only see one pass.
+function row(y: number, xs: number[], idPrefix: string): Pad[] {
+  return xs.map((x, i) => ({ id: `${idPrefix}-${i}`, x, y }))
 }
 
 export const PADS: Pad[] = [
-  ...segmentPads(WAYPOINTS[0], WAYPOINTS[1], [160, 340, 520, 700], 55, 'row1'),
-  ...segmentPads(WAYPOINTS[1], WAYPOINTS[2], [60, 130], 55, 'col1'),
-  ...segmentPads(WAYPOINTS[2], WAYPOINTS[3], [80, 220, 360], 55, 'row2'),
-  ...segmentPads(WAYPOINTS[3], WAYPOINTS[4], [50, 110], 55, 'col2'),
-  ...segmentPads(WAYPOINTS[4], WAYPOINTS[5], [90, 230, 370, 510], 55, 'row3'),
+  ...row(72, [140, 280, 420, 560, 700], 'top'),
+  ...row(215, [80, 200, 320, 440, 560, 680], 'mid1'),
+  { id: 'east-0', x: 845, y: 175 },
+  { id: 'east-1', x: 845, y: 255 },
+  { id: 'west-0', x: 190, y: 385 },
+  { id: 'west-1', x: 190, y: 470 },
+  ...row(385, [380, 500, 620, 740, 860, 960], 'mid2'),
 ]

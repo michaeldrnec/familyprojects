@@ -227,7 +227,7 @@
 .ion-perimeter .ip-panel-header {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   gap: 8px;
   font-weight: 700;
   font-size: 13px;
@@ -280,6 +280,10 @@
 
 .ion-perimeter .ip-branch-choice button {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
   background: rgba(96, 165, 250, 0.14);
   border: 1px solid rgba(96, 165, 250, 0.5);
   color: var(--text-h);
@@ -425,6 +429,93 @@
 /* Larger, more thumb-friendly touch targets on coarse-pointer (touch)
  * devices -- the same convention starwarden's CSS uses -- since the shop
  * bar and tower panel are the primary controls, not an accessory. */
+.ion-perimeter .ip-panel-name {
+  flex: 1;
+}
+
+.ion-perimeter .ip-branch-choice button small {
+  font-size: 10px;
+  font-weight: 400;
+  opacity: 0.75;
+  line-height: 1.2;
+}
+
+.ion-perimeter .ip-tower-icon {
+  display: block;
+  flex: none;
+  pointer-events: none;
+}
+
+.ion-perimeter .ip-hud-difficulty {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.7;
+}
+
+.ion-perimeter .ip-difficulty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.ion-perimeter .ip-difficulty-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.ion-perimeter .ip-difficulty-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 92px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-h);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.ion-perimeter .ip-difficulty-pips {
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.ion-perimeter .ip-difficulty-btn.level-0 { --lvl: #4ade80; }
+.ion-perimeter .ip-difficulty-btn.level-1 { --lvl: #facc15; }
+.ion-perimeter .ip-difficulty-btn.level-2 { --lvl: #fb923c; }
+.ion-perimeter .ip-difficulty-btn.level-3 { --lvl: #f87171; }
+
+.ion-perimeter .ip-difficulty-btn .ip-difficulty-pips {
+  color: var(--lvl);
+}
+
+.ion-perimeter .ip-difficulty-btn.selected {
+  border-color: var(--lvl);
+  background: color-mix(in srgb, var(--lvl) 18%, transparent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--lvl) 35%, transparent);
+}
+
+.ion-perimeter .ip-difficulty-blurb {
+  margin: 0;
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.ion-perimeter .ip-difficulty-score {
+  opacity: 0.7;
+  font-size: 12px;
+  margin-left: 4px;
+}
+
 @media (pointer: coarse), (hover: none) {
   .ion-perimeter .ip-shop-btn {
     min-width: 72px;

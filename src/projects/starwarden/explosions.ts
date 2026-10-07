@@ -21,6 +21,7 @@ export interface Explosion {
 
 const ENEMY_COLORS = ['#fbbf24', '#f87171', '#fb923c', '#fde68a']
 const SHIP_COLORS = ['#67e8f9', '#e5e7eb', '#a3e635', '#fbbf24']
+const SPARK_COLORS = ['#e0f2fe', '#a5f3fc', '#ffffff']
 
 // scale differentiates a small enemy/asteroid pop from a bigger ship-death
 // blast -- more particles, wider spread, longer-lived.
@@ -29,18 +30,18 @@ export function spawnExplosion(
   worldX: number,
   y: number,
   nextId: number,
-  scale: 'small' | 'large' = 'small',
+  scale: 'spark' | 'small' | 'large' = 'small',
 ): Explosion {
-  const count = scale === 'large' ? 22 : 10
-  const maxSpeed = scale === 'large' ? 220 : 130
-  const duration = scale === 'large' ? 0.9 : 0.5
-  const colors = scale === 'large' ? SHIP_COLORS : ENEMY_COLORS
+  const count = scale === 'large' ? 22 : scale === 'spark' ? 5 : 10
+  const maxSpeed = scale === 'large' ? 220 : scale === 'spark' ? 90 : 130
+  const duration = scale === 'large' ? 0.9 : scale === 'spark' ? 0.22 : 0.5
+  const colors = scale === 'large' ? SHIP_COLORS : scale === 'spark' ? SPARK_COLORS : ENEMY_COLORS
   const particles: ExplosionParticle[] = []
   for (let i = 0; i < count; i++) {
     particles.push({
       angle: rng.range(0, Math.PI * 2),
       speed: rng.range(maxSpeed * 0.3, maxSpeed),
-      size: rng.range(1.5, scale === 'large' ? 4.5 : 3),
+      size: rng.range(1.2, scale === 'large' ? 4.5 : scale === 'spark' ? 2 : 3),
       color: colors[Math.floor(rng.next() * colors.length)],
     })
   }

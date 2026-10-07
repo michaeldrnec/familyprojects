@@ -2,6 +2,7 @@
 // left/right set facing (not velocity), and a separate thrust key
 // accelerates the ship along its current facing direction with inertia --
 // releasing thrust decays velocity via drag rather than stopping instantly.
+import type { Rng } from './rng'
 
 export const WORLD_WIDTH = 4000
 export const VIEW_WIDTH = 900
@@ -25,19 +26,17 @@ export const HEALTH_MAX = 3
 
 export const SHIP_RADIUS = 15
 
-// A collision-imminent shield: arms automatically when a hazard gets this
-// close and absorbs the very next hit for free. Once used (or once its
-// window expires unused) it starts "charging": a clean streak with no
-// damage taken recharges it, but any hit taken while charging resets the
-// streak back to zero -- so getting the shield back means surviving
-// SHIELD_REGEN_TIME seconds completely unscathed, not just waiting it out.
-export const SHIELD_TRIGGER_RANGE = 70
-export const SHIELD_ACTIVE_DURATION = 0.6
-export const SHIELD_REGEN_TIME = 60
+// A passive shield: while 'ready' it sits around the ship as a visible
+// bubble and absorbs the next hit, whenever that hit comes. Once spent it
+// recharges over SHIELD_REGEN_TIME seconds; taking a hit while charging
+// pauses the recharge for that moment rather than wiping the progress.
+export const SHIELD_REGEN_TIME = 30
 // How long the "shield fully charged" flourish plays once regen completes.
 export const SHIELD_FLASH_DURATION = 0.5
+// How long the shatter ring plays when the shield absorbs a hit.
+export const SHIELD_BREAK_DURATION = 0.5
 
-export type ShieldState = 'ready' | 'active' | 'charging'
+export type ShieldState = 'ready' | 'charging'
 
 export interface ShipState {
   worldX: number // position along the wraparound world, 0..WORLD_WIDTH
@@ -49,12 +48,13 @@ export interface ShipState {
   crystals: number
   health: number
   shieldState: ShieldState
-  // While 'active': seconds remaining in the absorb window (counts down).
-  // While 'charging': seconds of clean streak accumulated so far (counts
-  // up toward SHIELD_REGEN_TIME).
+  // While 'charging': seconds of recharge accumulated so far (counts up
+  // toward SHIELD_REGEN_TIME). Unused while 'ready'.
   shieldTimer: number
   // Seconds remaining on the "just finished charging" visual flourish.
   shieldFlash: number
+  // Seconds remaining on the "shield just absorbed a hit" shatter ring.
+  shieldBreak: number
 }
 
 export interface ShipInput {
@@ -78,6 +78,7 @@ export function initialShip(): ShipState {
     shieldState: 'ready',
     shieldTimer: 0,
     shieldFlash: 0,
+    shieldBreak: 0,
   }
 }
 
@@ -93,6 +94,12 @@ export function wrapDelta(b: number, a: number, width: number): number {
   if (d > width / 2) d -= width
   if (d < -width / 2) d += width
   return d
+}
+
+// A random world x at least `minGap` px around the loop from `centerX`
+// (the camera's center), so the spawn is guaranteed to be off-screen.
+export function offscreenSpawnX(rng: Rng, centerX: number, worldWidth: number, minGap = 600): number {
+  return wrap(centerX + rng.range(minGap, worldWidth - minGap), worldWidth)
 }
 
 export function stepShip(ship: ShipState, input: ShipInput, dt: number): ShipState {

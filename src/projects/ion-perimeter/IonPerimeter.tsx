@@ -22,7 +22,18 @@ import {
   type BranchId,
 } from './towers'
 import { WAVES, TOTAL_WAVES, type WaveDef, type WaveSpawnEntry } from './waves'
-import { STARTING_CREDITS, CORE_INTEGRITY_MAX, sellRefund, killCredit, killScore, waveClearBonus } from './economy'
+import { CORE_INTEGRITY_MAX, sellRefund, killCredit, killScore, waveClearBonus } from './economy'
+import { DIFFICULTIES, DIFFICULTY_ORDER, loadDifficulty, saveDifficulty, type Difficulty, type DifficultyId } from './difficulty'
+import {
+  drawTowerArt,
+  previewTower,
+  spawnUpgradeFx,
+  stepUpgradeFx,
+  drawUpgradeFx,
+  withAlpha,
+  BRANCH_COLORS,
+  type UpgradeFx,
+} from './towerArt'
 import { loadProgress, recordRun, isTowerUnlocked, isBranchUnlocked, type Progress } from './progress'
 import { makeRng, type Rng } from './rng'
 import { spawnExplosion, stepExplosions, type Explosion } from './explosions'
@@ -32,6 +43,7 @@ import {
   stepFx,
   type Projectile,
   type BeamFx,
+  type BeamStyle,
   type ChainFx,
 } from './projectiles'
 import * as audio from './audio'
@@ -154,54 +166,6 @@ function drawCore(ctx: CanvasRenderingContext2D, integrity: number, t: number) {
   ctx.restore()
 }
 
-function drawTower(ctx: CanvasRenderingContext2D, tower: TowerInstance) {
-  const def = TOWER_DEFS[tower.defId]
-  ctx.save()
-  ctx.translate(tower.x, tower.y)
-  const size = 12 + tower.tier * 2.4
-  ctx.shadowColor = def.color
-  ctx.shadowBlur = 9 + tower.fxTimer * 45
-  ctx.beginPath()
-  for (let i = 0; i < 6; i++) {
-    const a = (Math.PI / 3) * i - Math.PI / 6
-    const px = Math.cos(a) * size
-    const py = Math.sin(a) * size
-    if (i === 0) ctx.moveTo(px, py)
-    else ctx.lineTo(px, py)
-  }
-  ctx.closePath()
-  ctx.fillStyle = 'rgba(8,12,20,0.92)'
-  ctx.fill()
-  ctx.strokeStyle = def.color
-  ctx.lineWidth = 2
-  ctx.stroke()
-  ctx.save()
-  ctx.rotate(tower.angle)
-  ctx.strokeStyle = def.color
-  ctx.lineWidth = 3
-  ctx.beginPath()
-  ctx.moveTo(0, 0)
-  ctx.lineTo(size + 9, 0)
-  ctx.stroke()
-  ctx.restore()
-  // tier pips
-  for (let i = 0; i <= tower.tier; i++) {
-    ctx.beginPath()
-    ctx.arc(-size + i * 6 + 3, size + 7, 1.8, 0, Math.PI * 2)
-    ctx.fillStyle = def.color
-    ctx.fill()
-  }
-  // branch ring once specialized
-  if (tower.branch) {
-    ctx.beginPath()
-    ctx.arc(0, 0, size + 5, 0, Math.PI * 2)
-    ctx.strokeStyle = tower.branch === 'a' ? '#fbbf24' : '#f472b6'
-    ctx.lineWidth = 1.4
-    ctx.stroke()
-  }
-  ctx.restore()
-}
-
 function drawEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy) {
   const def = ENEMY_DEFS[enemy.defId]
   const r = def.radius
@@ -262,27 +226,93 @@ function drawEnemy(ctx: CanvasRenderingContext2D, enemy: Enemy) {
 }
 
 function drawProjectile(ctx: CanvasRenderingContext2D, p: Projectile) {
+  const speed = Math.hypot(p.vx, p.vy) || 1
+  const ux = p.vx / speed
+  const uy = p.vy / speed
   ctx.save()
   ctx.shadowColor = p.color
   ctx.shadowBlur = 8
-  ctx.fillStyle = p.color
-  ctx.beginPath()
-  ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
-  ctx.fill()
+  ctx.lineCap = 'round'
+  if (p.style === 'shell') {
+    // flak shell: a round slug dragging a smoky trail
+    ctx.strokeStyle = withAlpha(p.color, 0.35)
+    ctx.lineWidth = p.radius * 1.4
+    ctx.beginPath()
+    ctx.moveTo(p.x, p.y)
+    ctx.lineTo(p.x - ux * 16, p.y - uy * 16)
+    ctx.stroke()
+    ctx.fillStyle = p.color
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
+    ctx.fill()
+  } else {
+    // cannon slug: a streaked bolt, fatter and pinker when overcharged
+    const heavy = p.style === 'heavy'
+    const len = heavy ? 13 : 9
+    ctx.strokeStyle = heavy ? BRANCH_COLORS.b : p.color
+    ctx.lineWidth = p.radius * (heavy ? 1.6 : 1.2)
+    ctx.beginPath()
+    ctx.moveTo(p.x - ux * len, p.y - uy * len)
+    ctx.lineTo(p.x, p.y)
+    ctx.stroke()
+    ctx.fillStyle = '#ffffff'
+    ctx.beginPath()
+    ctx.arc(p.x, p.y, p.radius * 0.6, 0, Math.PI * 2)
+    ctx.fill()
+  }
   ctx.restore()
 }
 
 function drawBeamFx(ctx: CanvasRenderingContext2D, fx: BeamFx) {
+  const a = fx.life / fx.maxLife
+  const line = () => {
+    ctx.beginPath()
+    ctx.moveTo(fx.x1, fx.y1)
+    ctx.lineTo(fx.x2, fx.y2)
+    ctx.stroke()
+  }
   ctx.save()
-  ctx.globalAlpha = fx.life / fx.maxLife
-  ctx.strokeStyle = fx.color
-  ctx.lineWidth = 3
+  ctx.lineCap = 'round'
   ctx.shadowColor = fx.color
   ctx.shadowBlur = 12
-  ctx.beginPath()
-  ctx.moveTo(fx.x1, fx.y1)
-  ctx.lineTo(fx.x2, fx.y2)
-  ctx.stroke()
+  // soft halo, then a hot core
+  ctx.globalAlpha = a * 0.4
+  ctx.strokeStyle = fx.color
+  ctx.lineWidth = fx.width * 2.8
+  line()
+  ctx.globalAlpha = a
+  ctx.strokeStyle = fx.style === 'rail' || fx.style === 'focus' ? '#ffffff' : fx.color
+  ctx.lineWidth = fx.width
+  line()
+
+  const dx = fx.x2 - fx.x1
+  const dy = fx.y2 - fx.y1
+  const len = Math.hypot(dx, dy) || 1
+  const ux = dx / len
+  const uy = dy / len
+  if (fx.style === 'phase') {
+    // Phase Beam: a sine ripple wrapped around the beam
+    ctx.strokeStyle = BRANCH_COLORS.a
+    ctx.lineWidth = 1.4
+    ctx.beginPath()
+    for (let d = 0; d <= len; d += 4) {
+      const off = Math.sin(d * 0.25 + a * 20) * 6 * a
+      const x = fx.x1 + ux * d - uy * off
+      const y = fx.y1 + uy * d + ux * off
+      if (d === 0) ctx.moveTo(x, y)
+      else ctx.lineTo(x, y)
+    }
+    ctx.stroke()
+  } else if (fx.style === 'rail') {
+    // Railgun: shock rings left along the slug's path
+    ctx.strokeStyle = fx.color
+    ctx.lineWidth = 1.2
+    for (let d = 30; d < len; d += 34) {
+      ctx.beginPath()
+      ctx.ellipse(fx.x1 + ux * d, fx.y1 + uy * d, 2 + (1 - a) * 4, 5 + (1 - a) * 9, Math.atan2(uy, ux), 0, Math.PI * 2)
+      ctx.stroke()
+    }
+  }
   ctx.restore()
 }
 
@@ -327,6 +357,48 @@ function drawRangeRing(ctx: CanvasRenderingContext2D, x: number, y: number, rang
   ctx.restore()
 }
 
+// Small static canvas rendering of a tower, for the shop bar and the
+// branch-choice buttons -- so the buttons show the same silhouette as the map.
+function TowerIcon({ defId, tier = 0, branch = null, size = 36 }: { defId: TowerId; tier?: number; branch?: BranchId | null; size?: number }) {
+  const ref = useRef<HTMLCanvasElement>(null)
+  useEffect(() => {
+    const ctx = ref.current?.getContext('2d')
+    if (!ctx) return
+    const px = size * 2
+    ctx.clearRect(0, 0, px, px)
+    ctx.save()
+    ctx.translate(px / 2, px / 2)
+    ctx.scale(px / 64, px / 64)
+    drawTowerArt(ctx, previewTower(defId, tier, branch), 0, false)
+    ctx.restore()
+  }, [defId, tier, branch, size])
+  return <canvas ref={ref} width={size * 2} height={size * 2} style={{ width: size, height: size }} className="ip-tower-icon" />
+}
+
+function DifficultyPicker({ value, onChange }: { value: DifficultyId; onChange: (id: DifficultyId) => void }) {
+  return (
+    <div className="ip-difficulty">
+      <div className="ip-difficulty-options" role="radiogroup" aria-label="Difficulty">
+        {DIFFICULTY_ORDER.map((id, i) => (
+          <button
+            key={id}
+            role="radio"
+            aria-checked={value === id}
+            className={`ip-difficulty-btn level-${i} ${value === id ? 'selected' : ''}`}
+            onClick={() => onChange(id)}
+          >
+            <span className="ip-difficulty-pips">{'◆'.repeat(i + 1)}</span>
+            {DIFFICULTIES[id].name}
+          </button>
+        ))}
+      </div>
+      <p className="ip-difficulty-blurb">
+        {DIFFICULTIES[value].blurb} <span className="ip-difficulty-score">Score ×{DIFFICULTIES[value].scoreMultiplier}</span>
+      </p>
+    </div>
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Wave scheduling
 // ---------------------------------------------------------------------------
@@ -336,12 +408,16 @@ interface ScheduledSpawn {
   defId: EnemyId
 }
 
-function buildSpawnQueue(waveDef: WaveDef): { queue: ScheduledSpawn[]; bossWarnAt: number | null } {
+function buildSpawnQueue(waveDef: WaveDef, difficulty: Difficulty): { queue: ScheduledSpawn[]; bossWarnAt: number | null } {
   const entries: ScheduledSpawn[] = []
   let lastRegularTime = 0
   for (const s of waveDef.spawns as WaveSpawnEntry[]) {
-    for (let i = 0; i < s.count; i++) {
-      const time = s.delay + i * s.interval
+    // More ships per entry on harder settings, packed a little tighter so
+    // the entry doesn't just stretch out into a longer, thinner trickle.
+    const count = Math.max(1, Math.round(s.count * difficulty.enemyCount))
+    const interval = s.interval / Math.sqrt(difficulty.enemyCount)
+    for (let i = 0; i < count; i++) {
+      const time = s.delay + i * interval
       entries.push({ time, defId: s.defId })
       lastRegularTime = Math.max(lastRegularTime, time)
     }
@@ -362,7 +438,9 @@ function IonPerimeter() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   const [phase, setPhase] = useState<Phase>('start')
-  const [credits, setCredits] = useState(STARTING_CREDITS)
+  const [difficultyId, setDifficultyId] = useState<DifficultyId>(() => loadDifficulty())
+  const difficulty = DIFFICULTIES[difficultyId]
+  const [credits, setCredits] = useState(difficulty.startingCredits)
   const [coreIntegrity, setCoreIntegrity] = useState(CORE_INTEGRITY_MAX)
   const [waveNumber, setWaveNumber] = useState(0)
   const [score, setScore] = useState(0)
@@ -385,12 +463,13 @@ function IonPerimeter() {
   const beamFxRef = useRef<BeamFx[]>([])
   const chainFxRef = useRef<ChainFx[]>([])
   const explosionsRef = useRef<Explosion[]>([])
+  const upgradeFxRef = useRef<UpgradeFx[]>([])
   const nextIdRef = useRef(1)
   const worldTimeRef = useRef(0)
   const rngRef = useRef<Rng>(makeRng((Date.now() % 2147483647) >>> 0))
   const starsRef = useRef<Point[]>(makeStars(rngRef.current, 90))
 
-  const creditsRef = useRef(STARTING_CREDITS)
+  const creditsRef = useRef(difficulty.startingCredits)
   const coreRef = useRef(CORE_INTEGRITY_MAX)
   const scoreRef = useRef(0)
 
@@ -434,9 +513,10 @@ function IonPerimeter() {
     beamFxRef.current = []
     chainFxRef.current = []
     explosionsRef.current = []
+    upgradeFxRef.current = []
     spawnQueueRef.current = []
     nextIdRef.current = 1
-    creditsRef.current = STARTING_CREDITS
+    creditsRef.current = difficulty.startingCredits
     coreRef.current = CORE_INTEGRITY_MAX
     scoreRef.current = 0
     waveKillsRef.current = 0
@@ -444,7 +524,7 @@ function IonPerimeter() {
     bossWarnAtRef.current = null
     bossWarnedRef.current = false
     bossWarningRemainingRef.current = 0
-    setCredits(STARTING_CREDITS)
+    setCredits(difficulty.startingCredits)
     setCoreIntegrity(CORE_INTEGRITY_MAX)
     setScore(0)
     setSelectedTowerType(null)
@@ -457,7 +537,7 @@ function IonPerimeter() {
 
   function launchWave(index: number) {
     const waveDef = WAVES[index - 1]
-    const { queue, bossWarnAt } = buildSpawnQueue(waveDef)
+    const { queue, bossWarnAt } = buildSpawnQueue(waveDef, difficulty)
     spawnQueueRef.current = queue
     bossWarnAtRef.current = bossWarnAt
     bossWarnedRef.current = false
@@ -467,6 +547,11 @@ function IonPerimeter() {
     setWaveNumber(index)
     setWaveSummary(null)
     setPhase('playing')
+  }
+
+  function handleDifficultyChange(id: DifficultyId) {
+    setDifficultyId(id)
+    saveDifficulty(id)
   }
 
   function handleStart() {
@@ -487,7 +572,7 @@ function IonPerimeter() {
   function completeWave() {
     const waveDef = WAVES[waveNumber - 1]
     const wasBoss = !!waveDef?.boss
-    const bonus = waveClearBonus(coreRef.current, waveNumber, wasBoss)
+    const bonus = waveClearBonus(coreRef.current, waveNumber, wasBoss, difficulty)
     addCredits(bonus)
     addScore(bonus)
     audio.playWaveClear()
@@ -553,11 +638,19 @@ function IonPerimeter() {
         dmg *= SIEGE_COIL_BOSS_MULTIPLIER
       }
       applyDamage(enemy, dmg, def.ignoresArmor, targetDef.armor, now)
+      if (stats.slowFactor < 1) {
+        enemy.slowUntil = Math.max(enemy.slowUntil, now + 0.8)
+        enemy.slowFactor = Math.min(enemy.slowFactor, stats.slowFactor)
+      }
       explosionsRef.current.push(spawnExplosion(rngRef.current, enemy.x, enemy.y, nextIdRef.current++, 'hit'))
       const vx = enemy.x - tower.x
       const vy = enemy.y - tower.y
       maxAlong = Math.max(maxAlong, vx * Math.cos(angle) + vy * Math.sin(angle) + 14)
     }
+    const style: BeamStyle =
+      tower.defId === 'railgun' ? 'rail' : tower.branch === 'a' ? 'phase' : tower.branch === 'b' ? 'focus' : 'lance'
+    const width = { lance: 2 + tower.tier * 0.6, phase: 4, focus: 4.5, rail: 3 + tower.tier * 0.5 }[style]
+    const life = style === 'rail' ? 0.22 : 0.12
     beamFxRef.current.push({
       id: nextIdRef.current++,
       x1: tower.x,
@@ -565,8 +658,10 @@ function IonPerimeter() {
       x2: tower.x + Math.cos(angle) * maxAlong,
       y2: tower.y + Math.sin(angle) * maxAlong,
       color: def.color,
-      life: 0.12,
-      maxLife: 0.12,
+      width,
+      style,
+      life,
+      maxLife: life,
     })
     if (tower.defId === 'railgun') audio.playFireRailgun()
     else audio.playFireLaser()
@@ -661,6 +756,7 @@ function IonPerimeter() {
           stats.splashRadius,
           def.ignoresArmor,
           def.color,
+          tower.defId === 'flak' ? 'shell' : tower.branch === 'b' ? 'heavy' : 'bolt',
         ),
       )
       if (tower.defId === 'flak') audio.playFireFlak()
@@ -671,6 +767,11 @@ function IonPerimeter() {
   }
 
   function stepFrame(dtRaw: number) {
+    // Build/upgrade effects animate in real time in every phase, since most
+    // upgrading happens between waves or while paused.
+    upgradeFxRef.current = stepUpgradeFx(upgradeFxRef.current, dtRaw)
+    for (const tower of towersRef.current) if (tower.pop > 0) tower.pop = Math.max(0, tower.pop - dtRaw)
+
     if (phase === 'wave-cleared') {
       waveClearedTimerRef.current -= dtRaw
       if (waveClearedTimerRef.current <= 0) launchWave(waveNumber + 1)
@@ -695,7 +796,7 @@ function IonPerimeter() {
     }
     while (spawnQueueRef.current.length && spawnQueueRef.current[0].time <= waveTimerRef.current) {
       const next = spawnQueueRef.current.shift()!
-      enemiesRef.current.push(spawnEnemy(next.defId, nextIdRef.current++, waveNumber, now))
+      enemiesRef.current.push(spawnEnemy(next.defId, nextIdRef.current++, waveNumber, now, difficulty))
     }
 
     const survivors: Enemy[] = []
@@ -706,16 +807,16 @@ function IonPerimeter() {
         enemy.cloakPhase += dt
         enemy.cloaked = enemy.cloakPhase % 4.4 < 1.6
       }
-      if (enemy.shield < def.shield && now - enemy.lastHitAt > def.shieldRegenDelay) enemy.shield = def.shield
+      if (enemy.shield < enemy.maxShield && now - enemy.lastHitAt > def.shieldRegenDelay) enemy.shield = enemy.maxShield
       if (enemy.hitFlash > 0) enemy.hitFlash = Math.max(0, enemy.hitFlash - dt)
       if (enemy.defId === 'harbinger' && !enemy.escortSpawned && enemy.hp <= enemy.maxHp * 0.6) {
         enemy.escortSpawned = true
-        for (let i = 0; i < 3; i++) escorts.push(spawnEnemy('scout', nextIdRef.current++, waveNumber, now))
+        for (let i = 0; i < 3; i++) escorts.push(spawnEnemy('scout', nextIdRef.current++, waveNumber, now, difficulty))
       }
-      const speedNow = def.speed * (now < enemy.slowUntil ? enemy.slowFactor : 1)
+      const speedNow = def.speed * difficulty.enemySpeed * (now < enemy.slowUntil ? enemy.slowFactor : 1)
       const reachedCore = enemy.hp > 0 && advanceEnemy(enemy, speedNow * dt)
       if (reachedCore) {
-        damageCore(def.coreDamage)
+        damageCore(Math.round(def.coreDamage * difficulty.coreDamage))
         explosionsRef.current.push(spawnExplosion(rngRef.current, CORE.x, CORE.y, nextIdRef.current++, 'leak'))
         audio.playLeak()
         continue
@@ -746,10 +847,11 @@ function IonPerimeter() {
     for (const enemy of enemiesRef.current) {
       if (enemy.hp <= 0) {
         const def = ENEMY_DEFS[enemy.defId]
-        addCredits(killCredit(def))
-        addScore(killScore(def))
+        const bounty = killCredit(def, difficulty)
+        addCredits(bounty)
+        addScore(killScore(def, difficulty))
         waveKillsRef.current += 1
-        waveCreditsRef.current += killCredit(def)
+        waveCreditsRef.current += bounty
         explosionsRef.current.push(spawnExplosion(rngRef.current, enemy.x, enemy.y, nextIdRef.current++, 'kill'))
         audio.playExplosion('kill')
         continue
@@ -787,12 +889,13 @@ function IonPerimeter() {
     }
     drawCore(ctx, coreIntegrity, t)
 
-    for (const tower of towersRef.current) drawTower(ctx, tower)
+    for (const tower of towersRef.current) drawTowerArt(ctx, tower, t)
     for (const enemy of enemiesRef.current) drawEnemy(ctx, enemy)
     for (const p of projectilesRef.current) drawProjectile(ctx, p)
     for (const fx of beamFxRef.current) drawBeamFx(ctx, fx)
     for (const fx of chainFxRef.current) drawChainFx(ctx, fx)
     for (const ex of explosionsRef.current) drawExplosion(ctx, ex)
+    for (const fx of upgradeFxRef.current) drawUpgradeFx(ctx, fx)
 
     if (selectedTowerType && hoveredPadRef.current) {
       const pad = PADS.find((p) => p.id === hoveredPadRef.current)
@@ -869,7 +972,9 @@ function IonPerimeter() {
             fxTimer: 0,
             fxTargetX: pad.x,
             fxTargetY: pad.y,
+            pop: 0.25,
           })
+          upgradeFxRef.current.push(spawnUpgradeFx(rngRef.current, nextIdRef.current++, pad.x, pad.y, def.color, 'build', ''))
           audio.playPlace()
           setSelectedTowerType(null)
           forceUpdate()
@@ -910,6 +1015,10 @@ function IonPerimeter() {
     }
     tower.tier += 1
     tower.totalSpent += cost
+    tower.pop = 0.3
+    upgradeFxRef.current.push(
+      spawnUpgradeFx(rngRef.current, nextIdRef.current++, tower.x, tower.y, def.color, 'tier', `TIER ${tower.tier + 1}`),
+    )
     audio.playUpgrade()
     forceUpdate()
   }
@@ -924,6 +1033,10 @@ function IonPerimeter() {
       return
     }
     tower.branch = branchId
+    tower.pop = 0.4
+    upgradeFxRef.current.push(
+      spawnUpgradeFx(rngRef.current, nextIdRef.current++, tower.x, tower.y, def.color, 'branch', branch.name.toUpperCase(), BRANCH_COLORS[branchId]),
+    )
     audio.playUpgrade()
     forceUpdate()
   }
@@ -1026,6 +1139,7 @@ function IonPerimeter() {
                 Wave {waveNumber}/{TOTAL_WAVES}
               </div>
               <div className="ip-hud-stat ip-score">{score.toLocaleString()} pts</div>
+              <div className="ip-hud-stat ip-hud-difficulty">{difficulty.name}</div>
               <div className="ip-hud-buttons">
                 <button onClick={handleSpeedToggle} title="Toggle speed">
                   {speed}×
@@ -1050,6 +1164,7 @@ function IonPerimeter() {
                     title={def.description}
                   >
                     <span className="ip-shop-key">{i + 1}</span>
+                    <TowerIcon defId={id} />
                     <span className="ip-shop-name">{def.name}</span>
                     <span className="ip-shop-cost">{unlocked ? `⬡${def.cost}` : `🔒 Wave ${def.unlockWave}`}</span>
                   </button>
@@ -1065,7 +1180,8 @@ function IonPerimeter() {
                 return (
                   <div className="ip-tower-panel">
                     <div className="ip-panel-header">
-                      <span>
+                      <TowerIcon defId={selectedTower.defId} tier={selectedTower.tier} branch={selectedTower.branch} size={30} />
+                      <span className="ip-panel-name">
                         {def.name}
                         {branchName ? ` — ${branchName}` : ''}
                       </span>
@@ -1088,7 +1204,9 @@ function IonPerimeter() {
                             const unlocked = isBranchUnlocked(b, progress)
                             return (
                               <button key={b.id} disabled={!unlocked} onClick={() => handleChooseBranch(b.id)} title={b.description}>
-                                {unlocked ? b.name : `🔒 Wave ${b.unlockWave}`}
+                                <TowerIcon defId={selectedTower.defId} tier={2} branch={b.id} size={30} />
+                                <span>{unlocked ? b.name : `🔒 Wave ${b.unlockWave}`}</span>
+                                {unlocked && <small>{b.description}</small>}
                               </button>
                             )
                           })}
@@ -1145,6 +1263,7 @@ function IonPerimeter() {
                 <kbd>1</kbd>-<kbd>5</kbd> select a tower · <kbd>Space</kbd> pause
               </li>
             </ul>
+            <DifficultyPicker value={difficultyId} onChange={handleDifficultyChange} />
             <button className="ip-primary" onClick={handleStart}>
               Start Run
             </button>
@@ -1157,11 +1276,14 @@ function IonPerimeter() {
             <p className="ip-tagline">
               {phase === 'victory' ? 'The Harbinger falls. The outpost survives.' : `The core gave out on wave ${waveNumber}.`}
             </p>
-            <p>Score: {score.toLocaleString()}</p>
+            <p>
+              Score: {score.toLocaleString()} · {difficulty.name}
+            </p>
             {isNewBest && <p className="ip-new-best">New best!</p>}
             <p className="ip-best">
               Best wave: {progress.bestWave} · High score: {progress.highScore.toLocaleString()}
             </p>
+            <DifficultyPicker value={difficultyId} onChange={handleDifficultyChange} />
             <button className="ip-primary" onClick={handleStart}>
               Restart
             </button>

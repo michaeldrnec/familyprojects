@@ -98,6 +98,12 @@ drain far more than a Scout Drone).
   final stats. No endless mode in v1 — the campaign is deliberately finite and
   finishable.
 - **Game over**: Core Integrity reaches 0 at any point.
+- **Difficulty**: four presets picked on the start/end screens — Cadet (the original
+  v1 balance), Veteran (default), Commander, Nightmare. Each is a set of multipliers
+  in `difficulty.ts` over the same authored waves: enemy HP/shields, per-wave HP
+  growth, enemy speed, ships per spawn entry, starting credits, kill/wave bounty,
+  core damage per leak, and a score multiplier. The last choice is remembered in
+  `localStorage`.
 
 ## 7. Scoring & economy
 
@@ -145,8 +151,12 @@ yet):
   fanfare, game-over dirge.
 - **Visuals**: dark starfield + slow-drifting nebula gradient backdrop; the lane as a
   glowing corridor; pads as dim glowing platforms that brighten when buildable/
-  hovered; towers as distinct glowing vector silhouettes per type with a visible
-  tier/branch tell; enemies as glowing ship silhouettes with motion trails, shields
+  hovered; towers as distinct vector silhouettes per type (square-plate cannon,
+  arrowhead laser with lens, octagonal multi-tube flak launcher, orbiting-node ion
+  coil, twin-rail railgun) whose hardware grows with each tier and changes per branch,
+  plus rank chevrons, a tier-3 aura/targeting ring, and branch-colored arcs; builds,
+  upgrades and specializations fire a shockwave/light-pillar/spark burst with a
+  floating label; enemies as glowing ship silhouettes with motion trails, shields
   as a visible bubble, cloaked Phantoms rendered near-transparent; particle-burst
   explosions on every kill; Core Integrity rendered as a glowing ring/bar around the
   outpost that visibly dims with damage.
@@ -179,6 +189,8 @@ Module split, following the pattern established across the repo's other canvas g
 - `path.ts` — fixed lane waypoints + buildable pad positions, plus a
   distance-along-path → `{x, y, angle}` interpolation helper.
 - `towers.ts` — tower type/tier/branch definitions.
+- `towerArt.ts` — per-type/tier/branch tower rendering and build/upgrade effects.
+- `difficulty.ts` — difficulty presets and the remembered choice.
 - `enemies.ts` — enemy type definitions and per-type behavior flags.
 - `waves.ts` — the 20-wave authored schedule, including boss markers.
 - `projectiles.ts` — kinetic/flak projectile, laser beam, and ion chain update+draw.

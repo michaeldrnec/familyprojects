@@ -213,6 +213,7 @@ export interface TowerInstance {
   fxTimer: number // seconds remaining on a beam/chain firing visual
   fxTargetX: number
   fxTargetY: number
+  pop: number // seconds remaining of the build/upgrade "swell" animation
 }
 
 // Effective stats for a tower right now: its current tier's base stats,

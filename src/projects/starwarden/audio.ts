@@ -134,18 +134,6 @@ export function playHit() {
   osc.stop(ctx.currentTime + 0.2)
 }
 
-export function playShieldUp() {
-  if (!ctx || !masterGain) return
-  const osc = ctx.createOscillator()
-  osc.type = 'sine'
-  const gain = envGain(ctx, masterGain, 0.22, 0.01, 0.22)
-  osc.frequency.setValueAtTime(320, ctx.currentTime)
-  osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.2)
-  osc.connect(gain)
-  osc.start()
-  osc.stop(ctx.currentTime + 0.24)
-}
-
 export function playGameOver() {
   if (!ctx || !masterGain) return
   const notes = [440, 349.23, 261.63] // A4, F4, C4 -- a short descending phrase
@@ -215,9 +203,7 @@ export function playEscalation() {
   })
 }
 
-// A bright ascending sparkle for when the shield finishes its 60s clean-
-// streak regeneration -- distinct from playShieldUp's proximity-triggered
-// activation sweep.
+// A bright ascending sparkle for when the shield finishes recharging.
 export function playShieldRegen() {
   if (!ctx || !masterGain) return
   const notes = [392, 523.25, 659.25, 783.99] // G4, C5, E5, G5
@@ -237,3 +223,48 @@ export function playShieldRegen() {
   })
 }
 
+
+// The shield absorbing a hit: a glassy downward crack.
+export function playShieldBreak() {
+  if (!ctx || !masterGain) return
+  const osc = ctx.createOscillator()
+  osc.type = 'triangle'
+  const gain = envGain(ctx, masterGain, 0.25, 0.005, 0.3)
+  osc.frequency.setValueAtTime(1400, ctx.currentTime)
+  osc.frequency.exponentialRampToValueAtTime(260, ctx.currentTime + 0.28)
+  osc.connect(gain)
+  osc.start()
+  osc.stop(ctx.currentTime + 0.32)
+}
+
+// A laser bouncing off armor (shield gunner's shield, closed carrier hatch).
+export function playDeflect() {
+  if (!ctx || !masterGain) return
+  const osc = ctx.createOscillator()
+  osc.type = 'square'
+  const gain = envGain(ctx, masterGain, 0.08, 0.002, 0.06)
+  osc.frequency.setValueAtTime(2200, ctx.currentTime)
+  osc.frequency.exponentialRampToValueAtTime(1500, ctx.currentTime + 0.05)
+  osc.connect(gain)
+  osc.start()
+  osc.stop(ctx.currentTime + 0.07)
+}
+
+// Two short low beeps when fuel or crystals drop under 20%.
+export function playLowWarning() {
+  if (!ctx || !masterGain) return
+  ;[0, 0.16].forEach((offset) => {
+    const osc = ctx!.createOscillator()
+    osc.type = 'square'
+    const start = ctx!.currentTime + offset
+    const gain = ctx!.createGain()
+    gain.gain.setValueAtTime(0, start)
+    gain.gain.linearRampToValueAtTime(0.14, start + 0.01)
+    gain.gain.exponentialRampToValueAtTime(0.001, start + 0.11)
+    osc.frequency.value = 330
+    osc.connect(gain)
+    gain.connect(masterGain!)
+    osc.start(start)
+    osc.stop(start + 0.12)
+  })
+}

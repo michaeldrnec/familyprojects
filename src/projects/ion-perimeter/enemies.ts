@@ -1,8 +1,9 @@
 // Enemy type definitions -- see SPEC.md section 5. Stats here are the wave-1
-// baseline; waves.ts applies a mild per-wave HP multiplier to regular
-// enemies (not bosses, which only ever appear once each) so the full curve
-// doesn't need every stat re-typed per wave.
+// baseline; spawnEnemy() applies the chosen difficulty's HP multiplier plus a
+// per-wave HP growth to regular enemies (not bosses, which only ever appear
+// once each) so the full curve doesn't need every stat re-typed per wave.
 import { PATH } from './path'
+import type { Difficulty } from './difficulty'
 
 export type EnemyId =
   | 'scout'
@@ -172,6 +173,7 @@ export interface Enemy {
   hp: number
   maxHp: number // the wave-scaled HP this enemy spawned with, for HP-bar fraction
   shield: number
+  maxShield: number // difficulty-scaled shield this enemy regenerates back to
   distance: number // progress along the path, in px
   x: number
   y: number
@@ -185,16 +187,19 @@ export interface Enemy {
   escortSpawned: boolean // Harbinger only: whether its mid-fight escort has launched
 }
 
-export function spawnEnemy(defId: EnemyId, id: number, waveIndex: number, now: number): Enemy {
+export function spawnEnemy(defId: EnemyId, id: number, waveIndex: number, now: number, difficulty: Difficulty): Enemy {
   const def = ENEMY_DEFS[defId]
-  const scaledHp = def.boss ? def.hp : Math.round(def.hp * (1 + 0.12 * (waveIndex - 1)))
+  const growth = def.boss ? 1 : 1 + difficulty.hpGrowthPerWave * (waveIndex - 1)
+  const scaledHp = Math.round(def.hp * difficulty.enemyHp * growth)
+  const scaledShield = Math.round(def.shield * difficulty.enemyHp)
   const start = PATH.at(0)
   return {
     id,
     defId,
     hp: scaledHp,
     maxHp: scaledHp,
-    shield: def.shield,
+    shield: scaledShield,
+    maxShield: scaledShield,
     distance: 0,
     x: start.x,
     y: start.y,
