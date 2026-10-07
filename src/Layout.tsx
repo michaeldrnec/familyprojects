@@ -29,6 +29,7 @@ function Layout() {
             <img src="/StarwardenHeader.svg" alt="Starwarden" className="header-game-logo" />
           </>
         )}
+        {isHome && <span className="site-version">v{__APP_VERSION__}</span>}
       </header>
       <main className="site-main">
         <Outlet />
