@@ -114,4 +114,12 @@ export const projects: Project[] = [
     icon: '🐈',
     accent: '#fb7185',
   },
+  {
+    slug: 'lux-tenebris',
+    title: 'Lux Tenebris',
+    description: 'Every step dims your flashlight. Memorize the cave while it’s lit, then cross the dark from memory.',
+    category: 'Puzzles',
+    icon: '🔦',
+    accent: '#fcd34d',
+  },
 ]

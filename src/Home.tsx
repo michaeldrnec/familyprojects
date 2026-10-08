@@ -8,11 +8,19 @@ function accentStyle(p: Project): CSSProperties {
   return { '--card-accent': p.accent } as CSSProperties
 }
 
-// The newest project as a big featured card, the rest in a bento grid
-// where every fifth tile (and the last) runs double-wide.
+// Picks which bento tiles run double-wide: enough of them (at least two)
+// that the 4-column grid comes out with full rows, spread evenly.
+function wideTiles(count: number): Set<number> {
+  let wide = (4 - (count % 4)) % 4
+  if (wide < 2) wide += 4
+  return new Set(Array.from({ length: wide }, (_, j) => Math.round((j * count) / wide)))
+}
+
+// The newest project as a big featured card, the rest in a bento grid.
 function Home() {
   const featured = projects[projects.length - 1]
   const rest = projects.slice(0, -1).reverse()
+  const wide = wideTiles(rest.length)
   return (
     <div className="hd-bento">
       <Link to={`/${featured.slug}`} className="hd-feature" style={accentStyle(featured)}>
@@ -31,7 +39,7 @@ function Home() {
           <Link
             key={p.slug}
             to={`/${p.slug}`}
-            className={`hd-bento-tile ${i % 5 === 0 || i === rest.length - 1 ? 'wide' : ''}`}
+            className={`hd-bento-tile ${wide.has(i) ? 'wide' : ''}`}
             style={accentStyle(p)}
           >
             <span className="hd-bento-icon">{p.icon}</span>

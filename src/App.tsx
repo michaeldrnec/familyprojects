@@ -12,6 +12,7 @@ import Xenofuse from './projects/xenofuse/Xenofuse'
 import Starwarden from './projects/starwarden/Starwarden'
 import SolarWard from './projects/solar-ward/SolarWard'
 import IonPerimeter from './projects/ion-perimeter/IonPerimeter'
+import LuxTenebris from './projects/lux-tenebris/LuxTenebris'
 
 // Sentence Spin bundles a full ~370k-word dictionary (for free-form word
 // validation) that would otherwise bloat every route's initial load, so
@@ -39,6 +40,7 @@ function App() {
         <Route path="/starwarden" element={<Starwarden />} />
         <Route path="/solar-ward" element={<SolarWard />} />
         <Route path="/ion-perimeter" element={<IonPerimeter />} />
+        <Route path="/lux-tenebris" element={<LuxTenebris />} />
         <Route
           path="/scrapyard-ballistics"
           element={
