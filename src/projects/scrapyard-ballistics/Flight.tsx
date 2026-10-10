@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
-import { FlightSim, WARP_LEVELS, PHYSICS_WARP_MAX, type FlightOutcome, type SasMode } from './flight'
+import { FlightSim, WARP_LEVELS, PHYSICS_WARP_MAX, TEST_FIRE_TIME, type FlightOutcome, type SasMode } from './flight'
 import type { Blueprint } from './workshop'
 import { BUTTONS, BUTTON_LABEL, type ButtonId } from './wiring'
 import { FAILURE_LABEL } from './failures'
@@ -7,13 +7,21 @@ import { drawFlight, drawMap } from './render/telemetry'
 import { useCanvasLoop } from './useCanvas'
 import { formatAlt, formatSpeed, formatTime } from './format'
 import { ATMOSPHERE_TOP } from './atmosphere'
+import { coachTip } from './hints'
+import type { TrackPoint } from './progress'
 import * as audio from './audio'
 
 interface Props {
   blueprint: Blueprint
   seed: number
+  worn: Set<number>
+  coach: boolean // show in-flight tips (first few flights)
+  ghost: TrackPoint[] // best flight so far
+  bestAltitude: number
   onOver: (outcome: FlightOutcome) => void
 }
+
+const TIP_HOLD = 2.5 // s a coach tip stays up after its cause clears
 
 const OUTCOME_TITLE: Record<FlightOutcome['kind'], string> = {
   landed: 'Touchdown!',
@@ -26,9 +34,9 @@ const OUTCOME_TITLE: Record<FlightOutcome['kind'], string> = {
 
 const GRIT: Record<string, number> = { mower: 1, keg: 0.8, firework: 0.6, torch: 0.4, turbo: 0.15 }
 
-export default function Flight({ blueprint, seed, onOver }: Props) {
+export default function Flight({ blueprint, seed, worn, coach, ghost, bestAltitude, onOver }: Props) {
   const simRef = useRef<FlightSim | null>(null)
-  if (!simRef.current) simRef.current = new FlightSim(blueprint, seed)
+  if (!simRef.current) simRef.current = new FlightSim(blueprint, seed, worn)
   const sim = simRef.current
   const [, rerender] = useReducer((n: number) => n + 1, 0)
   const [map, setMap] = useState(false)
@@ -36,6 +44,8 @@ export default function Flight({ blueprint, seed, onOver }: Props) {
   const steerKeys = useRef({ left: false, right: false })
   const steerButtons = useRef({ left: false, right: false })
   const hudClock = useRef(0)
+  const [coachOn, setCoachOn] = useState(coach)
+  const tipRef = useRef<{ text: string; at: number } | null>(null)
 
   const canvasRef = useCanvasLoop((ctx, w, h, dt, time) => {
     const s = steerKeys.current
@@ -61,11 +71,11 @@ export default function Flight({ blueprint, seed, onOver }: Props) {
     else audio.setEngine(max > 0 ? thrust / max : 0, grit)
 
     if (map) {
-      drawMap(ctx, 0, 0, w, h, sim, true)
+      drawMap(ctx, 0, 0, w, h, sim, true, ghost)
     } else {
-      drawFlight(ctx, w, h, sim, { time, zoom })
+      drawFlight(ctx, w, h, sim, { time, zoom, bestAltitude })
       const mw = Math.min(200, w * 0.3)
-      drawMap(ctx, w - mw - 10, 10, mw, mw, sim, false)
+      drawMap(ctx, w - mw - 10, 10, mw, mw, sim, false, ghost)
     }
 
     hudClock.current += dt
@@ -140,6 +150,16 @@ export default function Flight({ blueprint, seed, onOver }: Props) {
   const recent = sim.log.slice(-4)
   const outcome = sim.outcome
 
+  // Coach tip, held on screen for a moment so it doesn't flicker.
+  let tip: string | null = null
+  if (coachOn && !outcome) {
+    const now = performance.now() / 1000
+    const fresh = coachTip(sim)
+    if (fresh) tipRef.current = { text: fresh, at: now }
+    else if (tipRef.current && now - tipRef.current.at > TIP_HOLD) tipRef.current = null
+    tip = tipRef.current?.text ?? null
+  }
+
   return (
     <div className="sb-flight">
       <div className="sb-flight-view">
@@ -181,6 +201,15 @@ export default function Flight({ blueprint, seed, onOver }: Props) {
             </li>
           ))}
         </ul>
+
+        {tip && (
+          <div className="sb-coach" role="status">
+            <span>💡 {tip}</span>
+            <button className="sb-x" onClick={() => setCoachOn(false)} aria-label="Turn tips off" title="Turn tips off">
+              ✕
+            </button>
+          </div>
+        )}
 
         {outcome && (
           <div className="sb-overlay">
@@ -226,6 +255,20 @@ export default function Flight({ blueprint, seed, onOver }: Props) {
         </div>
 
         <div className="sb-dash-group sb-stage">
+          {sim.status === 'pad' && (
+            <button
+              className="sb-btn sb-stage-btn sb-test-btn"
+              disabled={sim.testing > 0}
+              onClick={() => {
+                audio.init()
+                sim.testFire()
+                rerender()
+              }}
+              title={`Clamp down and run the IGNITE engines for ${TEST_FIRE_TIME} s. Fuel is topped back up afterwards.`}
+            >
+              {sim.testing > 0 ? `TESTING ${sim.testing.toFixed(1)}s` : 'TEST FIRE'}
+            </button>
+          )}
           {BUTTONS.map((b) => (
             <button
               key={b}
@@ -246,6 +289,8 @@ export default function Flight({ blueprint, seed, onOver }: Props) {
               <div key={p.uid} className={`sb-engine${p.failure ? ' fault' : ''}${p.ignited ? ' lit' : ''}`}>
                 <div className="sb-engine-name">
                   E{i + 1} {p.def.name.split(' ').slice(-1)[0]}
+                  {p.tested && <span className="sb-engine-tag"> {Math.round(p.variance * 100)}%</span>}
+                  {p.worn && <span className="sb-engine-tag worn"> worn</span>}
                 </div>
                 <div className="sb-bar-meter" title="Heat">
                   <span style={{ width: `${Math.min(100, p.heat * 100)}%` }} className={p.heat > 0.75 ? 'hot' : ''} />
@@ -303,6 +348,13 @@ export default function Flight({ blueprint, seed, onOver }: Props) {
           </div>
           <button className="sb-btn sb-btn-small" onClick={() => setMap((m) => !m)}>
             {map ? 'CAM' : 'MAP'}
+          </button>
+          <button
+            className={`sb-btn sb-btn-small${coachOn ? ' active' : ''}`}
+            onClick={() => setCoachOn((c) => !c)}
+            title="In-flight tips"
+          >
+            TIPS
           </button>
           {!map && (
             <span className="sb-zoom">

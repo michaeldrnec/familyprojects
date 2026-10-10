@@ -35,6 +35,18 @@ up to a minimal launchable kit, so a run can never soft-lock.
   nozzle face isn't, and a nose cone or chute only attaches at its base).
 - Live overlays show the center of mass, the center of thrust, the net thrust torque
   about the COM (a torque arrow and a kN·m readout), total mass, liftoff TWR and Δv.
+- A part can be mirrored left-to-right (`F`). A fin only welds on one side, so a fin
+  placed where it would weld to nothing is mirrored automatically to face the hull, and
+  a pair of fins comes out symmetrical.
+- Parts can be dragged to a new cell. **Symmetry** (`Y`) places a mirrored twin across the
+  centre column for every part. Undo/redo (`Ctrl+Z` / `Ctrl+Shift+Z`) covers every
+  blueprint and wiring edit for the session.
+- **Saved designs**: up to six named blueprints in the save, plus the built-in Fence Hopper.
+- **Staging dry run** (`staging.ts`): replays IGNITE and STAGE 1–4, plus the automatic
+  triggers they set off (tanks running dry, burnouts, timers), against the weld graph. Each
+  lit engine is assumed to burn all the fuel it can reach. That gives a per-stage TWR and
+  Δv table, a tint on every part for the stage it drops with, and wiring warnings (engines
+  never lit, engines with no tank on their side of a bolt ring, unwired chutes and bolts).
 - Warnings (no command seat, nothing ignitable, disconnected parts, unwired engines)
   are advisory. You're allowed to launch a bad idea.
 
@@ -118,6 +130,19 @@ switched off and sits in a **free-falling floating frame**:
 - Debris that separated with a deployed chute is recovered. Other debris is lost.
 - A craft left in space at End flight is lost, unless you're in a stable orbit with
   a delivered satellite, in which case the satellite counts.
+- **Wear**: a recovered part that hit the ground above 75% of its crash tolerance comes
+  back worn. Worn parts have 75% weld strength, and worn engines fail 2.5× as often. The
+  inventory counts worn units per part type, and a launch uses the worn ones first. The
+  Black Market repairs them for 30% of the part price (`wear.ts`).
+- **Side jobs** (`jobs.ts`): three repeatable jobs are always on the hub board. Their
+  targets scale off your best altitude: an altitude run, a low part count, landing within a
+  set distance of the pad, a soft touchdown, recovering every part, a Mach target, and an
+  ocean splashdown once you've passed 5 km. They pay every time, and a finished or passed
+  job is replaced.
+- **Junker's notes**: the debrief shows up to three hints about what went wrong (Max-Q
+  weld snaps, overheats, burn-ups, a shredded or unopened chute, tumbling, low TWR, a
+  sub-orbital space shot), plus a nudge toward the next open contract. The rules are in
+  `hints.ts`, which also holds the hub's Strategy guide.
 - **Cash**: `4·√(max altitude in m)` plus contract payouts, plus a bonus for any
   stable orbit.
 
@@ -135,10 +160,22 @@ switched off and sits in a **free-falling floating frame**:
 Stretch goal (not in v1): Moon slingshot, with a second gravity body and a sphere of
 influence.
 
+- **Test fire**: on the pad, TEST FIRE clamps the rig and runs the IGNITE engines that can
+  shut down for 3 s. It reports each engine's rolled thrust and any pull to one side, then
+  refuels. Fireworks sit it out.
+- **Coach**: for the first five flights, a banner shows one tip for the most urgent thing
+  happening right now (fault, heat, Max-Q, stress, spin, chute timing, a missed stage). The
+  TIPS button toggles it.
+- **Best-flight ghost**: the altitude profile of the record flight is saved. A dashed BEST
+  line marks it in the sky, the map draws its trail, and the debrief charts this flight
+  against it, next to the full flight log.
+
 ## 9. Persistence
 
 `localStorage` key `scrapyard-ballistics:save` holds cash, inventory counts, completed
-contracts, best altitude, flight count and the last blueprint and wiring. The hub has a
+contracts, best altitude, flight count, the last blueprint and wiring, saved designs, worn
+counts, the side-job board and the best flight's track. A fresh save starts with the Fence
+Hopper on the board. The hub has a
 Reset save button.
 
 ## 10. Audio & visuals

@@ -16,7 +16,7 @@
 // the frame -> ground contact, heat, fuel, failures, stats.
 import Matter from 'matter-js'
 import { G0, fuelFlow, type PartDef } from './parts'
-import { components, type Blueprint, type Vec } from './workshop'
+import { blueprintStats, components, upVector, type Blueprint, type Vec } from './workshop'
 import { WiringRuntime, settingsFor, type ButtonId, type InputPort, type SourceRef } from './wiring'
 import {
   buildRig,
@@ -53,6 +53,8 @@ import {
 } from './orbit'
 import { rollFailure, BYPASS_TIME, FAILURE_LABEL, type FailureKind } from './failures'
 import { makeRng, type Rng } from './rng'
+import { HARD_LANDING, WORN_FAILURE } from './wear'
+import type { TrackPoint } from './progress'
 
 export type FlightStatus = 'pad' | 'flying' | 'ended'
 export type SasMode = 'off' | 'hold' | 'prograde' | 'retrograde'
@@ -97,6 +99,8 @@ export interface FlightPart {
   scorch: number // re-entry heat soak, 1 = burned up
   lost?: boolean // debris resolved as lost
   recovered?: boolean // debris resolved as recovered
+  worn: boolean // came back from a hard landing: weaker welds, flakier engine
+  tested?: boolean // ran on the test stand, so its thrust variance is known
 }
 
 export interface Blast {
@@ -121,6 +125,14 @@ export interface FlightStats {
   reachedSpace: boolean
   orbitAchieved: boolean
   satDelivered: boolean
+  // What went wrong, for the debrief's hints.
+  weldsBroken: number
+  overheats: number
+  burnups: number
+  hardwareFailures: number
+  chuteDeployed: boolean
+  chuteShredded: boolean
+  maxSpin: number // rad/s
 }
 
 export interface FlightOutcome {
@@ -131,6 +143,10 @@ export interface FlightOutcome {
   lost: number[] // uids
   stats: FlightStats
   flightTime: number
+  downrange: number // m from the pad where it ended
+  wornOut: number[] // recovered uids that took a hard landing
+  log: FlightLog[]
+  track: TrackPoint[]
 }
 
 export interface Warnings {
@@ -144,6 +160,8 @@ export interface Warnings {
 }
 
 const LIFTOFF_ALT = 0.5
+export const TEST_FIRE_TIME = 3 // s on the test stand
+const TRACK_MAX = 600 // samples; the interval doubles when it fills
 const SHIELD = 0.05
 const CHUTE_SHRED_Q = 3500 // Pa
 const CHUTE_MAX_FORCE = 24000 // N -- the bedsheet stretches rather than rips the weld
@@ -179,6 +197,13 @@ export class FlightSim {
     reachedSpace: false,
     orbitAchieved: false,
     satDelivered: false,
+    weldsBroken: 0,
+    overheats: 0,
+    burnups: 0,
+    hardwareFailures: 0,
+    chuteDeployed: false,
+    chuteShredded: false,
+    maxSpin: 0,
   }
   log: FlightLog[] = []
   cues: Cue[] = []
@@ -195,12 +220,18 @@ export class FlightSim {
   private prevAltitude = 0
   private feedGroup = new Map<number, number>()
   private lowestOffset = 0 // metres from COM to lowest point, along -up
+  testing = 0 // s left on the test stand
+  private clamped = false
+  private testFuel: Map<number, number> | null = null
+  track: TrackPoint[] = []
+  private trackDt = 0.5
+  private lastSample = -Infinity
 
-  constructor(bp: Blueprint, seed: number) {
+  constructor(bp: Blueprint, seed: number, worn: Set<number> = new Set()) {
     this.bp = bp
     this.seed = seed
     this.rng = makeRng(seed)
-    this.rig = buildRig(bp)
+    this.rig = buildRig(bp, worn)
     this.wiring = new WiringRuntime(bp)
     for (const rp of this.rig.parts.values()) {
       const def = rp.def
@@ -225,6 +256,7 @@ export class FlightSim {
         chuteOpen: 0,
         venting: false,
         scorch: 0,
+        worn: worn.has(rp.uid),
       })
     }
     this.refreshTopology(true)
@@ -338,6 +370,11 @@ export class FlightSim {
 
   pressButton(id: ButtonId) {
     if (this.status === 'ended') return
+    if (this.testing > 0) {
+      this.say('Still on the test stand. Wait for the clamps to let go.', 'warn')
+      this.cues.push('denied')
+      return
+    }
     const acted = this.fireSource({ kind: 'button', id })
     if (!acted && !this.wiring.hasWiresFrom({ kind: 'button', id })) {
       this.say(`${id === 'IGNITE' ? 'IGNITE' : id.replace('STAGE', 'STAGE ')} isn't wired to anything.`, 'warn')
@@ -390,6 +427,79 @@ export class FlightSim {
     this.warp = level
   }
 
+  // Static fire: clamp the rig down, run the IGNITE engines for a few
+  // seconds, then shut them off and top the fuel back up. It shows each
+  // engine's rolled thrust (and whether the welds hold under full thrust)
+  // without risking the flight. Fireworks can't be shut off, so they sit
+  // the test out.
+  testFire() {
+    if (this.status !== 'pad' || this.testing > 0) return
+    const uids = this.bp.wires
+      .filter((w) => w.from.kind === 'button' && w.from.id === 'IGNITE' && w.to.port === 'ignite')
+      .map((w) => w.to.uid)
+    let lit = 0
+    let skipped = false
+    this.testFuel = new Map([...this.parts.values()].map((p) => [p.uid, p.fuel]))
+    for (const uid of uids) {
+      const p = this.parts.get(uid)
+      if (!p || !p.alive || !p.def.engine || p.ignited) continue
+      if (!p.def.engine.canShutdown) {
+        skipped = true
+        continue
+      }
+      p.ignited = true
+      p.starved = false
+      lit++
+    }
+    if (skipped) this.say('Fireworks can’t be test-fired: once lit, they go.', 'warn')
+    if (lit === 0) {
+      this.testFuel = null
+      if (!skipped) this.say('Nothing on IGNITE that can be test-fired.', 'warn')
+      this.cues.push('denied')
+      return
+    }
+    this.testing = TEST_FIRE_TIME
+    this.clamped = true
+    this.cues.push('ignite')
+    this.say(`Test stand: clamps on, ${lit} engine(s) lit for ${TEST_FIRE_TIME} s.`, 'info')
+  }
+
+  private endTest() {
+    this.testing = 0
+    this.clamped = false
+    const tested: FlightPart[] = []
+    for (const p of this.parts.values()) {
+      if (p.ignited) tested.push(p)
+      if (p.def.engine) {
+        p.ignited = false
+        p.heat = 0
+        p.failure = null
+        p.skew = 0
+        p.bypass = 0
+        p.throttleOut = 0
+      }
+      const f = this.testFuel?.get(p.uid)
+      if (f !== undefined && p.alive) {
+        p.fuel = f
+        Matter.Body.setMass(p.rp.body, p.def.mass + f)
+      }
+    }
+    this.testFuel = null
+    // Torque from the measured thrusts, about the blueprint's COM.
+    const com = blueprintStats(this.bp).com ?? { x: 0, y: 0 }
+    let torque = 0
+    for (const p of tested) {
+      p.tested = true
+      const c = p.rp.gridCenter
+      const up = upVector(p.rp.rot)
+      const t = p.def.engine!.thrust * p.variance
+      torque += (c.x - com.x) * up.y * t - (c.y - com.y) * up.x * t
+      this.say(`Test stand: ${p.def.name} makes ${Math.round(p.variance * 100)}% thrust.`, Math.abs(p.variance - 1) > 0.06 ? 'warn' : 'info')
+    }
+    if (Math.abs(torque) > 300) this.say(`Uneven thrust: expect it to pull ${torque > 0 ? 'right' : 'left'}. Steer against it.`, 'warn')
+    else this.say('Test stand: thrust is even. Tanks topped up. Ready to fly.', 'good')
+  }
+
   endFlight() {
     if (this.status === 'ended') return
     this.finish(null)
@@ -434,11 +544,26 @@ export class FlightSim {
     }
     this.orbit = elements(this.frame)
     this.trackStats()
+    this.sampleTrack()
     this.prevAltitude = this.altitude
+  }
+
+  private sampleTrack() {
+    if (!this.liftedOff || this.t - this.lastSample < this.trackDt) return
+    this.lastSample = this.t
+    this.track.push([Math.round(this.t * 10) / 10, Math.round(this.altitude), Math.round(this.downrange)])
+    if (this.track.length >= TRACK_MAX) {
+      this.track = this.track.filter((_, i) => i % 2 === 0)
+      this.trackDt *= 2
+    }
   }
 
   private step() {
     this.t += STEP
+    if (this.testing > 0) {
+      this.testing -= STEP
+      if (this.testing <= 0) this.endTest()
+    }
     this.runWiringClock()
     this.checkBarometers()
 
@@ -454,6 +579,7 @@ export class FlightSim {
       }
       if (broken.length > 0) {
         for (const w of broken) breakWeld(this.rig, w)
+        this.stats.weldsBroken += broken.length
         const a = this.parts.get(broken[0].a)!.def.name
         const b = this.parts.get(broken[0].b)!.def.name
         this.say(`CRACK — the weld between ${a} and ${b} let go!`, 'bad')
@@ -470,6 +596,7 @@ export class FlightSim {
     this.cullFarDebris()
     this.orbit = elements(this.frame)
     this.trackStats()
+    this.sampleTrack()
     this.prevAltitude = this.altitude
   }
 
@@ -536,6 +663,7 @@ export class FlightSim {
       case 'deploy': {
         if (p.chute !== 'packed') return
         p.chute = 'open'
+        if (this.status !== 'pad') this.stats.chuteDeployed = true
         this.cues.push('chute')
         this.say(this.status === 'pad' ? 'The parachute flops out onto the launch pad.' : 'Chute out!', this.status === 'pad' ? 'warn' : 'info')
         return
@@ -681,6 +809,7 @@ export class FlightSim {
             const qLocal = 0.5 * rho * speed * speed
             if (qLocal > CHUTE_SHRED_Q && p.chuteOpen > 0.2) {
               p.chute = 'shredded'
+              this.stats.chuteShredded = true
               this.cues.push('shred')
               this.say('The bedsheet shredded — deployed way too fast!', 'bad')
             } else {
@@ -781,17 +910,21 @@ export class FlightSim {
         p.skew = 0
       }
     }
-    if (!p.failure && p.main) {
-      const f = rollFailure(this.rng, e, throttle, p.heat, STEP)
+    if (!p.failure && p.main && !this.clamped) {
+      const f = rollFailure(this.rng, e, throttle, p.heat, STEP, p.worn ? WORN_FAILURE : 1)
       if (f) {
         p.failure = f
         if (f === 'stuck') p.stuckAt = throttle
         if (f === 'uneven') p.skew = this.rng.range(0.06, 0.14) * (this.rng.next() < 0.5 ? -1 : 1)
+        this.stats.hardwareFailures++
         this.cues.push('failure')
         this.say(`${p.def.name}: ${FAILURE_LABEL[f].toUpperCase()}!`, 'bad')
       }
     }
-    if (p.heat >= 1) this.explode(p, 'overheated and blew apart')
+    if (p.heat >= 1 && p.alive) {
+      this.stats.overheats++
+      this.explode(p, 'overheated and blew apart')
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -905,7 +1038,7 @@ export class FlightSim {
     this.lowestOffset = this.computeLowestOffset()
     const clearance = this.altitude - this.lowestOffset
     if (!this.liftedOff) {
-      if (clearance > LIFTOFF_ALT) {
+      if (clearance > LIFTOFF_ALT && !this.clamped) {
         this.liftedOff = true
         this.say('LIFTOFF!', 'good')
       } else {
@@ -917,7 +1050,7 @@ export class FlightSim {
         }
         const up = radialUp(this.frame.p)
         const vr = this.frame.v.x * up.x + this.frame.v.y * up.y
-        if (vr < 0 || clearance < 0) {
+        if (vr < 0 || clearance < 0 || this.clamped) {
           this.frame.v.x = 0
           this.frame.v.y = 0
           const r = PLANET_RADIUS + this.lowestOffset
@@ -951,6 +1084,7 @@ export class FlightSim {
       const excess = local - p.def.heatTolerance
       if (excess > 0) p.scorch += excess * STEP * 0.6
       else p.scorch = Math.max(0, p.scorch - 0.05 * STEP)
+      if (p.scorch >= 1 && p.alive) this.stats.burnups++
       if (p.scorch >= 1) this.explode(p, this.verticalSpeed > 0 ? 'burned up — too fast in thick air' : 'burned up on re-entry', 'burnup')
     }
   }
@@ -1018,6 +1152,7 @@ export class FlightSim {
     if (this.speed > s.maxSpeed) s.maxSpeed = this.speed
     if (this.mach > s.maxMach) s.maxMach = this.mach
     if (this.q > s.maxQ) s.maxQ = this.q
+    if (this.liftedOff && Math.abs(this.omega) > s.maxSpin) s.maxSpin = Math.abs(this.omega)
     if (this.mach >= 1 && alt < 10_000 && !s.sonicLow) {
       s.sonicLow = true
       this.say('SONIC BOOM! Every window in the county rattles.', 'good')
@@ -1050,6 +1185,7 @@ export class FlightSim {
     }
 
     const ocean = this.isOcean()
+    const wornOut: number[] = []
     for (const p of this.parts.values()) {
       if (p.recovered) {
         recovered.push(p.uid)
@@ -1065,6 +1201,8 @@ export class FlightSim {
       else survives = impactSpeed! <= p.def.crashTolerance * (ocean ? 1.5 : 1)
       if (survives) recovered.push(p.uid)
       else lost.push(p.uid)
+      const tolerance = p.def.crashTolerance * (ocean ? 1.5 : 1)
+      if (survives && impactSpeed !== null && impactSpeed > tolerance * HARD_LANDING) wornOut.push(p.uid)
       if (p.uid === cmd && survives && kind !== 'scrubbed') commandSurvived = true
     }
     if (kind === 'landed') {
@@ -1077,6 +1215,7 @@ export class FlightSim {
         commandSurvived ? 'good' : 'bad',
       )
     }
+    if (this.liftedOff) this.track.push([Math.round(this.t * 10) / 10, Math.max(0, Math.round(this.altitude)), Math.round(this.downrange)])
     this.outcome = {
       kind,
       impactSpeed: impactSpeed ?? 0,
@@ -1085,6 +1224,10 @@ export class FlightSim {
       lost,
       stats: { ...this.stats },
       flightTime: this.t,
+      downrange: this.downrange,
+      wornOut,
+      log: [...this.log],
+      track: [...this.track],
     }
     this.status = 'ended'
   }
@@ -1109,7 +1252,7 @@ export class FlightSim {
 
   private say(text: string, tone: FlightLog['tone']) {
     this.log.push({ t: this.t, text, tone })
-    if (this.log.length > 60) this.log.shift()
+    if (this.log.length > 200) this.log.shift()
   }
 
   drainCues(): Cue[] {

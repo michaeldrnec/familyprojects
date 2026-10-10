@@ -66,12 +66,25 @@ export function wireColor(src: SourceRef): string {
   return src.kind === 'button' ? WIRE_COLORS[src.id] : WIRE_COLORS.part
 }
 
+export interface Ghost {
+  partId: PartId
+  c: number
+  r: number
+  rot: Rot
+  flip: boolean
+  valid: boolean
+}
+
 export interface BlueprintDrawOptions {
   mode: 'build' | 'wire'
-  ghost?: { partId: PartId; c: number; r: number; rot: Rot; valid: boolean }
+  ghosts?: Ghost[]
   selectedUid?: number | null
   pending?: SourceRef | null
   missing?: Set<number> // uids beyond inventory
+  worn?: Set<number> // uids flying worn
+  dimUid?: number | null // the part being dragged
+  symmetry?: boolean // draw the mirror line
+  stageColors?: Map<number, string> // uid -> tint for the stage it drops with
   stats?: BlueprintStats
   time: number
 }
@@ -159,6 +172,19 @@ export function drawBlueprint(ctx: CanvasRenderingContext2D, l: BlueprintLayout,
     }
   }
 
+  // Symmetry mirror line down the centre of the grid.
+  if (o.symmetry) {
+    const x = l.ox + (GRID_COLS / 2) * cell
+    ctx.strokeStyle = 'rgba(255,209,102,0.7)'
+    ctx.lineWidth = 1.5
+    ctx.setLineDash([8, 5])
+    ctx.beginPath()
+    ctx.moveTo(x, l.oy - cell * 0.2)
+    ctx.lineTo(x, l.oy + GRID_ROWS * cell + cell * 0.2)
+    ctx.stroke()
+    ctx.setLineDash([])
+  }
+
   // Parts
   for (const p of bp.parts) {
     const def = PART_DEFS[p.partId]
@@ -167,10 +193,18 @@ export function drawBlueprint(ctx: CanvasRenderingContext2D, l: BlueprintLayout,
     const px = cellToPx(l, c.x, c.y)
     const missing = o.missing?.has(p.uid)
     const selected = o.selectedUid === p.uid
+    const tint = o.stageColors?.get(p.uid)
+    if (tint) {
+      const tl = cellToPx(l, p.c, p.r)
+      ctx.fillStyle = tint
+      ctx.globalAlpha = 0.22
+      ctx.fillRect(tl.x + 1, tl.y + 1, w * cell - 2, h * cell - 2)
+      ctx.globalAlpha = 1
+    }
     ctx.save()
     ctx.translate(px.x, px.y)
-    ctx.globalAlpha = missing ? 0.35 : 1
-    drawPartArt(ctx, def, p.rot, cell, BLUEPRINT_STYLE)
+    ctx.globalAlpha = missing || o.dimUid === p.uid ? 0.35 : 1
+    drawPartArt(ctx, def, p.rot, cell, BLUEPRINT_STYLE, p.flip)
     ctx.restore()
     if (selected) {
       const tl = cellToPx(l, p.c, p.r)
@@ -179,6 +213,25 @@ export function drawBlueprint(ctx: CanvasRenderingContext2D, l: BlueprintLayout,
       ctx.setLineDash([4, 3])
       ctx.strokeRect(tl.x + 2, tl.y + 2, w * cell - 4, h * cell - 4)
       ctx.setLineDash([])
+    }
+    if (o.worn?.has(p.uid)) {
+      // Rusty orange corner brackets.
+      const tl = cellToPx(l, p.c, p.r)
+      const k = cell * 0.22
+      const x1 = tl.x + 3
+      const y1 = tl.y + 3
+      const x2 = tl.x + w * cell - 3
+      const y2 = tl.y + h * cell - 3
+      ctx.strokeStyle = '#ff9f43'
+      ctx.lineWidth = 2
+      ctx.beginPath()
+      ctx.moveTo(x1, y1 + k)
+      ctx.lineTo(x1, y1)
+      ctx.lineTo(x1 + k, y1)
+      ctx.moveTo(x2 - k, y2)
+      ctx.lineTo(x2, y2)
+      ctx.lineTo(x2, y2 - k)
+      ctx.stroke()
     }
     if (missing) {
       const tl = cellToPx(l, p.c, p.r)
@@ -192,16 +245,16 @@ export function drawBlueprint(ctx: CanvasRenderingContext2D, l: BlueprintLayout,
   }
 
   // Ghost placement
-  if (o.ghost) {
-    const def = PART_DEFS[o.ghost.partId]
-    const { w, h } = footprint(o.ghost.partId, o.ghost.rot)
-    const tl = cellToPx(l, o.ghost.c, o.ghost.r)
-    ctx.fillStyle = o.ghost.valid ? 'rgba(140,233,154,0.18)' : 'rgba(255,107,107,0.22)'
+  for (const g of o.ghosts ?? []) {
+    const def = PART_DEFS[g.partId]
+    const { w, h } = footprint(g.partId, g.rot)
+    const tl = cellToPx(l, g.c, g.r)
+    ctx.fillStyle = g.valid ? 'rgba(140,233,154,0.18)' : 'rgba(255,107,107,0.22)'
     ctx.fillRect(tl.x, tl.y, w * cell, h * cell)
     ctx.save()
     ctx.translate(tl.x + (w * cell) / 2, tl.y + (h * cell) / 2)
     ctx.globalAlpha = 0.6
-    drawPartArt(ctx, def, o.ghost.rot, cell, BLUEPRINT_STYLE)
+    drawPartArt(ctx, def, g.rot, cell, BLUEPRINT_STYLE, g.flip)
     ctx.restore()
   }
 

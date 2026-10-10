@@ -8,6 +8,7 @@ import { PPM } from '../structure'
 import { ATMOSPHERE_TOP, heatFlux } from '../atmosphere'
 import { PLANET_RADIUS, conicPoints } from '../orbit'
 import { WIREFRAME_STYLE, drawPartArt, type ArtStyle } from './partArt'
+import type { TrackPoint } from '../progress'
 
 const DEBRIS_STYLE: ArtStyle = { ...WIREFRAME_STYLE, stroke: '#4f9e70', accent: '#a0703a' }
 
@@ -24,6 +25,7 @@ function mix(a: number[], b: number[], t: number): string {
 export interface FlightDrawOptions {
   time: number // wall-clock seconds, for flicker
   zoom: number // user zoom multiplier
+  bestAltitude?: number // draws a "best" marker line in the sky
 }
 
 export function drawFlight(ctx: CanvasRenderingContext2D, w: number, h: number, sim: FlightSim, o: FlightDrawOptions) {
@@ -67,6 +69,7 @@ export function drawFlight(ctx: CanvasRenderingContext2D, w: number, h: number, 
   // up) before the rig itself.
 
   drawSurface(ctx, w, h, sim, scale, sx, sy)
+  if (o.bestAltitude && o.bestAltitude > 50) drawBestLine(ctx, w, h, sim, scale, o.bestAltitude, sx, sy)
 
   ctx.save()
   ctx.translate(w / 2 + sx, h * 0.52 + sy)
@@ -138,6 +141,32 @@ export function drawFlight(ctx: CanvasRenderingContext2D, w: number, h: number, 
   vig.addColorStop(1, 'rgba(0,0,0,0.55)')
   ctx.fillStyle = vig
   ctx.fillRect(0, 0, w, h)
+}
+
+// A dashed line across the sky at the best altitude so far, so you can see
+// yourself beating (or missing) the record.
+function drawBestLine(ctx: CanvasRenderingContext2D, w: number, h: number, sim: FlightSim, scale: number, best: number, sx: number, sy: number) {
+  const y = h * 0.52 + sy + (sim.altitude - best) * scale
+  ctx.font = '600 11px ui-monospace, monospace'
+  ctx.textAlign = 'left'
+  ctx.textBaseline = 'bottom'
+  ctx.fillStyle = 'rgba(255,209,102,0.85)'
+  if (y < 0 || y > h) {
+    // Off screen: a small arrow at the edge pointing to it.
+    const above = y < 0
+    const ey = above ? 22 : h - 8
+    ctx.fillText(`${above ? '▲' : '▼'} BEST ${best >= 10_000 ? (best / 1000).toFixed(1) + ' km' : Math.round(best) + ' m'}`, 10 + sx, ey)
+    return
+  }
+  ctx.strokeStyle = 'rgba(255,209,102,0.55)'
+  ctx.lineWidth = 1.5
+  ctx.setLineDash([10, 6])
+  ctx.beginPath()
+  ctx.moveTo(0, y)
+  ctx.lineTo(w, y)
+  ctx.stroke()
+  ctx.setLineDash([])
+  ctx.fillText(`BEST ${best >= 10_000 ? (best / 1000).toFixed(1) + ' km' : Math.round(best) + ' m'}`, 10 + sx, y - 3)
 }
 
 // Ground, launch pad and clouds, drawn in screen space with local-up =
@@ -258,7 +287,7 @@ function drawPartBody(ctx: CanvasRenderingContext2D, p: FlightPart, time: number
   const hot = p.def.engine ? p.heat : 0
   const glow = Math.max(hot > 0.6 ? (hot - 0.6) * 2.5 : 0, p.scorch)
   const partStyle: ArtStyle = glow > 0.05 ? { ...style, stroke: `rgb(255,${Math.round(220 - glow * 160)},${Math.round(120 - glow * 100)})` } : style
-  drawPartArt(ctx, p.def, p.rp.rot, 1, { ...partStyle, lineWidth: 0.06 })
+  drawPartArt(ctx, p.def, p.rp.rot, 1, { ...partStyle, lineWidth: 0.06 }, p.rp.flip)
   if (p.failure) {
     // blinking fault marker
     if (Math.floor(time * 4) % 2 === 0) {
@@ -305,7 +334,16 @@ function drawPartBody(ctx: CanvasRenderingContext2D, p: FlightPart, time: number
 // Orbit map
 // ---------------------------------------------------------------------------
 
-export function drawMap(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, sim: FlightSim, full: boolean) {
+export function drawMap(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  sim: FlightSim,
+  full: boolean,
+  ghost: TrackPoint[] = [],
+) {
   ctx.save()
   ctx.beginPath()
   ctx.rect(x, y, w, h)
@@ -349,6 +387,24 @@ export function drawMap(ctx: CanvasRenderingContext2D, x: number, y: number, w: 
   const pad = toScreen(0, PLANET_RADIUS)
   ctx.fillStyle = '#ffd166'
   ctx.fillRect(pad.x - 2, pad.y - 2, 4, 4)
+
+  // Ghost of the best flight, and this flight's own trail.
+  const trail = (track: TrackPoint[], style: string, width: number) => {
+    if (track.length < 2) return
+    ctx.strokeStyle = style
+    ctx.lineWidth = width
+    ctx.beginPath()
+    track.forEach(([, alt, down], i) => {
+      const phi = down / PLANET_RADIUS
+      const r = PLANET_RADIUS + alt
+      const q = toScreen(r * Math.sin(phi), r * Math.cos(phi))
+      if (i === 0) ctx.moveTo(q.x, q.y)
+      else ctx.lineTo(q.x, q.y)
+    })
+    ctx.stroke()
+  }
+  trail(ghost, 'rgba(255,209,102,0.35)', full ? 2 : 1.2)
+  trail(sim.track, 'rgba(255,255,255,0.55)', full ? 1.5 : 1)
 
   // Trajectory conic
   const pts = conicPoints(el, full ? 360 : 180)

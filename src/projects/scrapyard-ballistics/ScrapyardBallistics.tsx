@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Hub from './Hub'
 import Shop from './Shop'
 import Workshop from './Workshop'
@@ -7,9 +7,9 @@ import Flight from './Flight'
 import DebriefScreen from './Debrief'
 import { loadSave, writeSave, clearSave, freshSave, type SaveData } from './progress'
 import { settleFlight, type Debrief } from './economy'
-import { partCounts, type Blueprint } from './workshop'
+import type { Blueprint } from './workshop'
 import type { FlightOutcome } from './flight'
-import type { PartId } from './parts'
+import { wornUids } from './wear'
 import * as audio from './audio'
 import './ScrapyardBallistics.css'
 
@@ -19,12 +19,19 @@ import './ScrapyardBallistics.css'
 // is written through on every change.
 type Screen = 'hub' | 'shop' | 'workshop' | 'wiring' | 'flight' | 'debrief'
 
+const UNDO_LIMIT = 60
+// The in-flight coach pops up tips for a player's first few flights.
+const COACH_FLIGHTS = 5
+
 export default function ScrapyardBallistics() {
   const [save, setSave] = useState<SaveData>(() => loadSave())
   const [screen, setScreen] = useState<Screen>('hub')
   const [debrief, setDebrief] = useState<Debrief | null>(null)
-  const [flight, setFlight] = useState<{ bp: Blueprint; seed: number } | null>(null)
+  const [flight, setFlight] = useState<{ bp: Blueprint; seed: number; worn: Set<number> } | null>(null)
   const [muted, setMuted] = useState(audio.isMuted())
+  // Blueprint undo/redo for the workshop and wiring screens (this session only).
+  const history = useRef<{ undo: Blueprint[]; redo: Blueprint[] }>({ undo: [], redo: [] })
+  const [, setHistoryTick] = useState(0)
 
   function commit(next: SaveData) {
     setSave(next)
@@ -32,7 +39,38 @@ export default function ScrapyardBallistics() {
   }
 
   function setBlueprint(bp: Blueprint) {
+    if (bp === save.blueprint) return
+    const h = history.current
+    h.undo.push(save.blueprint)
+    if (h.undo.length > UNDO_LIMIT) h.undo.shift()
+    h.redo = []
+    setHistoryTick((n) => n + 1)
     commit({ ...save, blueprint: bp })
+  }
+
+  function undo() {
+    const h = history.current
+    const prev = h.undo.pop()
+    if (!prev) return audio.playDenied()
+    h.redo.push(save.blueprint)
+    setHistoryTick((n) => n + 1)
+    commit({ ...save, blueprint: prev })
+  }
+
+  function redo() {
+    const h = history.current
+    const next = h.redo.pop()
+    if (!next) return audio.playDenied()
+    h.undo.push(save.blueprint)
+    setHistoryTick((n) => n + 1)
+    commit({ ...save, blueprint: next })
+  }
+
+  const editing = {
+    onUndo: undo,
+    onRedo: redo,
+    canUndo: history.current.undo.length > 0,
+    canRedo: history.current.redo.length > 0,
   }
 
   function go(next: Screen) {
@@ -42,18 +80,17 @@ export default function ScrapyardBallistics() {
 
   function launch() {
     audio.init()
-    setFlight({ bp: save.blueprint, seed: (Date.now() ^ (save.flights * 2654435761)) >>> 0 })
+    setFlight({
+      bp: save.blueprint,
+      seed: (Date.now() ^ (save.flights * 2654435761)) >>> 0,
+      worn: wornUids(save.blueprint, save.worn),
+    })
     setScreen('flight')
   }
 
   function onFlightOver(outcome: FlightOutcome) {
     if (!flight) return
-    // Launched parts leave the inventory; settleFlight adds back survivors.
-    const inventory = { ...save.inventory }
-    for (const [id, n] of Object.entries(partCounts(flight.bp)) as [PartId, number][]) {
-      inventory[id] = Math.max(0, (inventory[id] ?? 0) - n)
-    }
-    const result = settleFlight({ ...save, inventory }, flight.bp, outcome)
+    const result = settleFlight(save, flight.bp, outcome, flight.worn)
     commit(result.save)
     setDebrief(result.debrief)
     if (result.debrief.contractsDone.length > 0) audio.playContract()
@@ -63,6 +100,7 @@ export default function ScrapyardBallistics() {
   function resetSave() {
     clearSave()
     const fresh = freshSave()
+    history.current = { undo: [], redo: [] }
     setSave(fresh)
     writeSave(fresh)
     setScreen('hub')
@@ -80,23 +118,34 @@ export default function ScrapyardBallistics() {
         {muted ? '🔇' : '🔊'}
       </button>
       {screen === 'hub' && (
-        <Hub save={save} onWorkshop={() => go('workshop')} onShop={() => go('shop')} onReset={resetSave} />
+        <Hub save={save} onChange={commit} onWorkshop={() => go('workshop')} onShop={() => go('shop')} onReset={resetSave} />
       )}
       {screen === 'shop' && <Shop save={save} onChange={commit} onBack={() => go('hub')} />}
       {screen === 'workshop' && (
         <Workshop
           save={save}
           onChange={setBlueprint}
+          onSaveChange={commit}
+          {...editing}
           onBack={() => go('hub')}
           onWiring={() => go('wiring')}
           onLaunch={launch}
         />
       )}
       {screen === 'wiring' && (
-        <Wiring save={save} onChange={setBlueprint} onBack={() => go('workshop')} onLaunch={launch} />
+        <Wiring save={save} onChange={setBlueprint} {...editing} onBack={() => go('workshop')} onLaunch={launch} />
       )}
       {screen === 'flight' && flight && (
-        <Flight key={flight.seed} blueprint={flight.bp} seed={flight.seed} onOver={onFlightOver} />
+        <Flight
+          key={flight.seed}
+          blueprint={flight.bp}
+          seed={flight.seed}
+          worn={flight.worn}
+          coach={save.flights < COACH_FLIGHTS}
+          ghost={save.bestTrack}
+          bestAltitude={save.bestAltitude}
+          onOver={onFlightOver}
+        />
       )}
       {screen === 'debrief' && debrief && (
         <DebriefScreen debrief={debrief} save={save} onHub={() => go('hub')} onRebuild={() => go('workshop')} />

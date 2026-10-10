@@ -24,4 +24,8 @@ the change:
   how an existing game plays (e.g. new modes, a new progression system).
 - **major** — only when the user explicitly asks for one (e.g. a site-wide redesign).
 
+**Plans don't bump the version.** Saving or editing a plan document (e.g. an
+`IMPROVEMENT-PLAN.md` for later work) is not a change to the site; the bump happens when the plan
+is implemented.
+
 If a change doesn't clearly fit one of these, ask the user before bumping.

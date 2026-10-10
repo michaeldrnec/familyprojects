@@ -6,6 +6,7 @@
 // while orbit.ts carries the whole thing through space.
 import Matter from 'matter-js'
 import { wetMass, type PartDef } from './parts'
+import { WORN_INTEGRITY } from './wear'
 import { blueprintStats, cellsOf, defOf, footprint, partCenter, upVector, welds, type Blueprint, type Dir, type Rot, type Vec } from './workshop'
 
 export const PPM = 20 // Matter units per metre
@@ -21,6 +22,7 @@ export interface RigPart {
   uid: number
   def: PartDef
   rot: Rot
+  flip: boolean // art only -- a mirrored part flies the same
   body: Matter.Body
   localUp: Vec // unit vector, part "up" in body frame at angle 0 (grid frame)
   w: number // footprint in metres (rotated)
@@ -62,7 +64,7 @@ function weldStiffness(a: PartDef, b: PartDef): number {
   return Math.min(WELD_STIFFNESS[a.id] ?? 0.85, WELD_STIFFNESS[b.id] ?? 0.85)
 }
 
-export function buildRig(bp: Blueprint): Rig {
+export function buildRig(bp: Blueprint, worn: Set<number> = new Set()): Rig {
   const engine = Matter.Engine.create({
     gravity: { x: 0, y: 0, scale: 0 },
     positionIterations: 10,
@@ -90,6 +92,7 @@ export function buildRig(bp: Blueprint): Rig {
       uid: p.uid,
       def,
       rot: p.rot,
+      flip: !!p.flip,
       body,
       localUp: upVector(p.rot),
       w,
@@ -126,7 +129,10 @@ export function buildRig(bp: Blueprint): Rig {
       a: wd.a,
       b: wd.b,
       cons: pins,
-      rating: Math.min(A.def.integrity, B.def.integrity),
+      rating: Math.min(
+        A.def.integrity * (worn.has(wd.a) ? WORN_INTEGRITY : 1),
+        B.def.integrity * (worn.has(wd.b) ? WORN_INTEGRITY : 1),
+      ),
       load: 0,
       fatigue: 0,
       alive: true,

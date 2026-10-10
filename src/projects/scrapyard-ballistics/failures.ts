@@ -16,8 +16,8 @@ export const FAILURE_LABEL: Record<FailureKind, string> = {
 
 export const BYPASS_TIME = 2 // s at half power while the bypass spools
 
-export function rollFailure(rng: Rng, engine: EngineStats, throttle: number, heat: number, dt: number): FailureKind | null {
-  const p = engine.failureRate * throttle * dt * (1 + 2 * heat)
+export function rollFailure(rng: Rng, engine: EngineStats, throttle: number, heat: number, dt: number, mult = 1): FailureKind | null {
+  const p = engine.failureRate * mult * throttle * dt * (1 + 2 * heat)
   if (rng.next() >= p) return null
   const options: [FailureKind, number][] = [
     ['hot', 0.3],

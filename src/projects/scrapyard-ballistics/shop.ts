@@ -30,5 +30,6 @@ export function sell(save: SaveData, id: PartId): SaveData | null {
     ...save,
     cash: save.cash + Math.floor(def.cost * SELL_FRACTION),
     inventory: { ...save.inventory, [id]: have - 1 },
+    worn: { ...save.worn, [id]: Math.min(save.worn[id] ?? 0, have - 1) },
   }
 }

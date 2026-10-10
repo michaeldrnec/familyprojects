@@ -18,6 +18,7 @@ export interface PlacedPart {
   c: number
   r: number
   rot: Rot
+  flip?: boolean // mirrored left-to-right (before rotating), for left/right fins
 }
 
 export interface Blueprint {
@@ -77,7 +78,8 @@ export function upVector(rot: Rot): Vec {
 }
 
 export function faceAttachable(p: PlacedPart, dir: Dir): boolean {
-  const original = (dir - p.rot + 4) % 4
+  let original = (dir - p.rot + 4) % 4
+  if (p.flip && original % 2 === 1) original = 4 - original // mirror swaps left and right
   return PART_DEFS[p.partId].attach[original]
 }
 
@@ -118,9 +120,49 @@ export function canPlace(bp: Blueprint, partId: PartId, c: number, r: number, ro
   return true
 }
 
-export function placePart(bp: Blueprint, partId: PartId, c: number, r: number, rot: Rot): Blueprint {
-  const part: PlacedPart = { uid: bp.nextUid, partId, c, r, rot }
+export function placePart(bp: Blueprint, partId: PartId, c: number, r: number, rot: Rot, flip = false): Blueprint {
+  const part: PlacedPart = { uid: bp.nextUid, partId, c, r, rot, ...(flip ? { flip } : {}) }
   return { ...bp, parts: [...bp.parts, part], nextUid: bp.nextUid + 1 }
+}
+
+// Parts whose left and right faces differ (fins) are the ones a mirror flip
+// actually changes.
+export function isHanded(partId: PartId): boolean {
+  const a = PART_DEFS[partId].attach
+  return a[1] !== a[3]
+}
+
+// When a handed part would weld to nothing as-is but would weld mirrored,
+// place it mirrored -- so a fin dropped on either side of the hull just
+// faces the hull.
+export function autoFlip(bp: Blueprint, partId: PartId, c: number, r: number, rot: Rot, flip: boolean): boolean {
+  if (!isHanded(partId)) return flip
+  const weldCount = (f: boolean) => {
+    const next = placePart(bp, partId, c, r, rot, f)
+    const uid = bp.nextUid
+    return welds(next).filter((w) => w.a === uid || w.b === uid).length
+  }
+  return weldCount(flip) === 0 && weldCount(!flip) > 0 ? !flip : flip
+}
+
+// Drag-to-move: same part, new top-left cell.
+export function movePart(bp: Blueprint, uid: number, c: number, r: number): Blueprint | null {
+  const p = bp.parts.find((q) => q.uid === uid)
+  if (!p || !canPlace(bp, p.partId, c, r, p.rot, uid)) return null
+  return { ...bp, parts: bp.parts.map((q) => (q.uid === uid ? { ...q, c, r } : q)) }
+}
+
+// Where the symmetry tool puts a part's twin: reflected across the grid's
+// centre column. Reflecting a rotated part is the same as rotating it the
+// other way and mirroring it.
+export function mirrorPlacement(partId: PartId, c: number, r: number, rot: Rot, flip: boolean) {
+  const { w } = footprint(partId, rot)
+  return { c: GRID_COLS - c - w, r, rot: ((4 - rot) % 4) as Rot, flip: !flip }
+}
+
+// Mirroring never changes a footprint, so it can't collide.
+export function flipPart(bp: Blueprint, uid: number): Blueprint {
+  return { ...bp, parts: bp.parts.map((q) => (q.uid === uid ? { ...q, flip: !q.flip } : q)) }
 }
 
 export function removePart(bp: Blueprint, uid: number): Blueprint {
@@ -274,8 +316,6 @@ export function blueprintStats(bp: Blueprint): BlueprintStats {
     if (comps.length > 1) warnings.push(`${comps.length - 1} part group(s) aren't welded to anything — they'll fall off at launch.`)
   }
   if (engines.length > 0 && igniteUids.size === 0) warnings.push('Nothing is wired to IGNITE. Open Wiring (or Auto-wire).')
-  const tanklessEngines = engines.filter((p) => !defOf(p).engine!.internalFuel)
-  if (tanklessEngines.length > 0 && !bp.parts.some((p) => defOf(p).tank)) warnings.push('Engines need a fuel tank on their stage.')
   if (thrust > 0 && twr < 1) warnings.push(`Liftoff TWR ${twr.toFixed(2)} — it won't leave the pad.`)
   if (thrust > 0 && Math.abs(torque) > 1500) warnings.push('Thrust is off-center — expect it to veer hard.')
   if (!bp.parts.some((p) => defOf(p).chute)) warnings.push('No parachute. The pilot has opinions about that.')

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { PART_DEFS } from './parts'
 import { inventoryShortfall, partAt, type Blueprint } from './workshop'
 import {
@@ -24,11 +24,15 @@ import * as audio from './audio'
 interface Props {
   save: SaveData
   onChange: (bp: Blueprint) => void
+  onUndo: () => void
+  onRedo: () => void
+  canUndo: boolean
+  canRedo: boolean
   onBack: () => void
   onLaunch: () => void
 }
 
-export default function Wiring({ save, onChange, onBack, onLaunch }: Props) {
+export default function Wiring({ save, onChange, onUndo, onRedo, canUndo, canRedo, onBack, onLaunch }: Props) {
   const bp = save.blueprint
   const [pending, setPending] = useState<SourceRef | null>(null)
   const [selectedUid, setSelectedUid] = useState<number | null>(null)
@@ -37,6 +41,23 @@ export default function Wiring({ save, onChange, onBack, onLaunch }: Props) {
 
   const canvasRef = useCanvasLoop((ctx, w, h, _dt, time) => {
     drawBlueprint(ctx, layoutBlueprint(w, h), bp, { mode: 'wire', selectedUid, pending, time })
+  })
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || !(e.ctrlKey || e.metaKey)) return
+      const k = e.key.toLowerCase()
+      if (k === 'z') {
+        e.preventDefault()
+        if (e.shiftKey) onRedo()
+        else onUndo()
+      } else if (k === 'y') {
+        e.preventDefault()
+        onRedo()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   })
 
   function sourceName(src: SourceRef): string {
@@ -121,6 +142,12 @@ export default function Wiring({ save, onChange, onBack, onLaunch }: Props) {
         </button>
         <h2>Wiring</h2>
         <div className="sb-bar-right">
+          <button className="sb-btn sb-btn-small sb-undo" disabled={!canUndo} onClick={onUndo} title="Undo (Ctrl+Z)">
+            ↶
+          </button>
+          <button className="sb-btn sb-btn-small sb-undo" disabled={!canRedo} onClick={onRedo} title="Redo (Ctrl+Shift+Z)">
+            ↷
+          </button>
           <button className="sb-btn sb-btn-launch" disabled={!canLaunch} onClick={onLaunch}>
             🚀 Launch
           </button>

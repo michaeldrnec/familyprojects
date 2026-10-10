@@ -325,10 +325,12 @@ const DRAW: Record<PartId, Drawer> = {
   },
 }
 
-// Draw a part centred at the current origin. `rot` quarter turns clockwise.
-export function drawPartArt(ctx: CanvasRenderingContext2D, def: PartDef, rot: number, u: number, style: ArtStyle) {
+// Draw a part centred at the current origin. `rot` quarter turns clockwise;
+// `flip` mirrors it left-to-right first.
+export function drawPartArt(ctx: CanvasRenderingContext2D, def: PartDef, rot: number, u: number, style: ArtStyle, flip = false) {
   ctx.save()
   ctx.rotate((rot * Math.PI) / 2)
+  if (flip) ctx.scale(-1, 1)
   ctx.lineWidth = style.lineWidth
   ctx.lineJoin = 'round'
   ctx.lineCap = 'round'

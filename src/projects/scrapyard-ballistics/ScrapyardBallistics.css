@@ -845,6 +845,259 @@
   margin-top: 14px;
 }
 
+.scrapyard-ballistics .sb-hints {
+  margin-top: 12px;
+  border-color: var(--sb-amber);
+}
+
+.scrapyard-ballistics .sb-hints ul,
+.scrapyard-ballistics .sb-howto ul {
+  padding-left: 18px;
+  margin: 4px 0 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.scrapyard-ballistics .sb-hints ul {
+  font-size: 13px;
+}
+
+.scrapyard-ballistics .sb-howto h4 {
+  margin: 8px 0 2px;
+  font-size: 12px;
+  color: var(--sb-amber);
+}
+
+.scrapyard-ballistics .sb-undo {
+  font-size: 18px;
+  line-height: 1;
+  padding: 4px 9px;
+}
+
+/* ---------- staging, designs, wear (workshop) ---------- */
+
+.scrapyard-ballistics .sb-stage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin: 8px 0 4px;
+}
+
+.scrapyard-ballistics .sb-stage-table th {
+  text-align: left;
+  color: var(--sb-muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--sb-line);
+  padding: 2px 4px;
+}
+
+.scrapyard-ballistics .sb-stage-table td {
+  padding: 2px 4px;
+  border-bottom: 1px dashed rgba(160, 215, 255, 0.12);
+}
+
+.scrapyard-ballistics .sb-stage-table td:not(:first-child),
+.scrapyard-ballistics .sb-stage-table th:not(:first-child) {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.scrapyard-ballistics .sb-stage-table .warn {
+  color: var(--sb-red);
+}
+
+.scrapyard-ballistics .sb-stage-table .sb-wire-dot {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+.scrapyard-ballistics .sb-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--sb-muted);
+  margin: 4px 0;
+}
+
+.scrapyard-ballistics .sb-badge-worn,
+.scrapyard-ballistics .sb-engine-tag.worn {
+  background: #ff9f43;
+  color: #1b1405;
+}
+
+.scrapyard-ballistics .sb-worn-note,
+.scrapyard-ballistics .sb-worn-count {
+  color: #ff9f43;
+  font-size: 12px;
+}
+
+.scrapyard-ballistics .sb-designs ul {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+.scrapyard-ballistics .sb-designs li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 0;
+  border-bottom: 1px dashed rgba(160, 215, 255, 0.15);
+}
+
+.scrapyard-ballistics .sb-designs li span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.scrapyard-ballistics .sb-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 12px;
+  color: var(--sb-ink);
+  background: rgba(5, 25, 50, 0.85);
+  border: 1px solid var(--sb-line);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+/* ---------- flight: coach, test stand ---------- */
+
+.scrapyard-ballistics .sb-coach {
+  position: absolute;
+  left: 50%;
+  top: 44px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(520px, calc(100% - 32px));
+  padding: 8px 10px 8px 14px;
+  background: rgba(30, 22, 4, 0.92);
+  border: 1px solid var(--sb-amber);
+  border-radius: 8px;
+  color: var(--sb-amber);
+  font-size: 13px;
+  line-height: 1.35;
+  z-index: 3;
+}
+
+.scrapyard-ballistics .sb-dash .sb-test-btn {
+  border-color: var(--sb-amber);
+  color: var(--sb-amber);
+}
+
+.scrapyard-ballistics .sb-engine-tag {
+  font-size: 10px;
+  border-radius: 3px;
+  padding: 0 3px;
+  margin-left: 3px;
+  background: rgba(125, 255, 176, 0.18);
+  color: var(--sb-green);
+}
+
+/* ---------- debrief: profile, log ---------- */
+
+.scrapyard-ballistics .sb-debrief-lower {
+  margin-top: 12px;
+}
+
+.scrapyard-ballistics .sb-profile {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.scrapyard-ballistics .sb-profile .axis {
+  stroke: var(--sb-line);
+  stroke-width: 1;
+}
+
+.scrapyard-ballistics .sb-profile text {
+  fill: var(--sb-muted);
+  font-size: 9px;
+  font-family: inherit;
+}
+
+.scrapyard-ballistics .sb-profile polyline {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.scrapyard-ballistics .sb-profile .this {
+  stroke: var(--sb-green);
+}
+
+.scrapyard-ballistics .sb-profile .best {
+  stroke: var(--sb-amber);
+  stroke-dasharray: 5 4;
+  opacity: 0.7;
+}
+
+.scrapyard-ballistics .sb-legend {
+  font-size: 11px;
+  color: var(--sb-muted);
+  margin: 4px 0 0;
+}
+
+.scrapyard-ballistics .sb-legend .sw {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  vertical-align: middle;
+  background: var(--sb-green);
+}
+
+.scrapyard-ballistics .sb-legend .sw.best {
+  background: var(--sb-amber);
+}
+
+.scrapyard-ballistics .sb-timeline ol {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.scrapyard-ballistics .sb-timeline .t {
+  color: var(--sb-muted);
+}
+
+.scrapyard-ballistics .sb-timeline .tone-warn {
+  color: var(--sb-amber);
+}
+
+.scrapyard-ballistics .sb-timeline .tone-bad {
+  color: var(--sb-red);
+}
+
+.scrapyard-ballistics .sb-timeline .tone-good {
+  color: var(--sb-green);
+}
+
+/* ---------- shop: repairs ---------- */
+
+.scrapyard-ballistics .sb-repair-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+  border-color: #ff9f43;
+  font-size: 13px;
+}
+
 /* ---------- small screens ---------- */
 
 @media (max-width: 760px) {
