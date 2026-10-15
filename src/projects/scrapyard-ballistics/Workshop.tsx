@@ -231,6 +231,14 @@ export default function Workshop(props: Props) {
     setSelectedUid(null)
   }
 
+  function clearBoard() {
+    if (bp.parts.length === 0) return
+    onChange(emptyBlueprint())
+    audio.playRemove()
+    setPalette(null)
+    setSelectedUid(null)
+  }
+
   function removeMissing() {
     let next = bp
     for (const uid of missing) next = removePart(next, uid)
@@ -296,6 +304,9 @@ export default function Workshop(props: Props) {
           </button>
           <button className="sb-btn sb-btn-small sb-undo" disabled={!canRedo} onClick={onRedo} title="Redo (Ctrl+Shift+Z)">
             ↷
+          </button>
+          <button className="sb-btn sb-btn-small" disabled={bp.parts.length === 0} onClick={clearBoard} title="Remove every part from the board (undo with Ctrl+Z)">
+            🗑 Clear
           </button>
           <button className="sb-btn" onClick={onWiring}>
             Wiring →
@@ -465,15 +476,6 @@ export default function Workshop(props: Props) {
                 </button>
               </div>
             )}
-            <button
-              className="sb-link"
-              onClick={() => {
-                onChange(emptyBlueprint())
-                setSelectedUid(null)
-              }}
-            >
-              Clear the board
-            </button>
           </section>
 
           <section className="sb-card sb-designs">
