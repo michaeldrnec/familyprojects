@@ -3,8 +3,8 @@
 > Break the marching alien lattice on the beat — four hot-running weapons, ventable hardlight
 > bunkers, and a tempo that climbs as they fall.
 
-Status: **planned — not yet built.** See [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) for the
-coding plan. That plan also resolves the gaps and ambiguities in this spec.
+Status: **built.** Playable at `/invader-protocol`. Section 6 records how the build resolved the
+spec's gaps and conflicts, and section 7 maps the code.
 
 ---
 
@@ -155,6 +155,52 @@ Sound is not decorative; it is the game's core clock and emotional throttle.
 ## 6. Resolved gaps & interpretations
 
 The spec above leaves some values unspecified and has a few conflicts (Space bound to both fire
-and dash, Right Bumper to both vent and weapon cycling, and so on). The decisions that resolve
-them are in the **"Resolved gaps & interpretations"** table in
-[IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md). When the game is built, move that table here.
+and dash, Right Bumper to both vent and weapon cycling, and so on). These are the decisions the
+build uses. All of the numbers live in `constants.ts`, so they're easy to retune.
+
+| Topic | Spec says | Decision |
+|---|---|---|
+| Space key | Fire (§5) and dash (§1.2) | **Space = fire.** Dash = Left Shift + direction; with no direction held, dash toward the last move direction. |
+| Gamepad RB / D-pad | RB = vent *and* next weapon; D-pad = move *and* weapon select | Left stick = move. D-pad = direct weapon select (↑1 →2 ↓3 ←4). LB/RB = cycle weapon. **B/Circle = vent.** RT = fire. LT or A = dash. |
+| Grid step ΔX | unspecified | 16 px per beat. Bounds are checked against the outermost *living* column (120 / 1800). |
+| Tempo vs. audio BPM tiers | F_step formula 60–210 BPM; audio tiers up to 220 | **The F_step formula is the single master clock**, and each grid step is one bass note. The audio tiers only pick which instrument layers play. The formula already matches the tiers (N=45→67, N=20→126, N=6→182, N=1→205 BPM). |
+| Column snap direction | neighbors collapse inward 40 px | Every column on each side of the gap shifts 40 px toward it, so each side stays rigid. Shift is tweened over 0.12 s via per-column `xOffset`. Grid stuns for 0.6 s; the music keeps playing. |
+| Who fires | Raiders fire straight down, 1.5–4.0 s per column | Each column has a fire timer (1.5–4.0 s). The lowest living entity fires, whatever its type, so columns still threaten after their raiders die. Frenzy: timer ×(1/1.5), ±12° aim spread, ±30% jitter on step size. |
+| Weapon damage | unspecified | Disruptor 20. Needle 45 per entity (pierces 3, ignores armor and barriers). Spread 14 per pellet. Siege 70 direct + 45 splash (R=75, linear falloff to 50%). |
+| Barrier Drone armor / barrier | "requires angle shots, Needle pierce, or Siege splash" | Drone carapace: Disruptor and the straight Spread pellet deal ×0.5. The Grunt beneath a living Drone has a barrier that absorbs *vertical, non-piercing, non-splash* shots (`abs(vx) < 1`). Angled Spread pellets, Needle, and Siege splash get through. |
+| Siege "arcing" | Vy −900, arcing | Travels straight; the arc is visual only (scale-up/down plus a shadow). Detonates on the first entity hit or at Y=100. |
+| Perfect Beat | ±50 ms of the bass pulse | Compared against beat timestamps in game time, not AudioContext time. On success: +25% speed, 0 heat, ×1.2 score on kills by that projectile, plus a chime and a flash. |
+| Overheat | locks 2.5 s, cooling to 0 | Heat falls linearly from 100 to 0 over 2.5 s with fire locked. Normal cooling: 25/s after 0.3 s without firing. |
+| Player shots vs. own bunkers | unspecified | Player shots pass through bunkers, since hardlight is friendly. "Chips cover shields" refers to Drone barriers. |
+| Enemy damage | unspecified | Plasma bolt 25 to a cell (3 hits per cell). Grunt fragment 30. Invaders touching a bunker erase the cells they overlap. Any hit on the player costs a life. |
+| Vent | converts E into a beam for 1.5 s; vaporizes the bunker | Requires E ≥ 10 and the player within the bunker's X-span. Beam DPS = 30 + 1.6·E to invaders in its X-span. It also erases enemy projectiles in the span. |
+| UFO points "by distance" | 1,000–5,000 | 1000 + 4000·clamp(abs(ufoX − playerX) / 960, 0, 1), so longer shots score more. Rounded to 100s. |
+| UFO bunker restore | +25% integrity to the most damaged bunker | Integrity = summed cell HP (max 1800). Restores 450 HP, rebuilding cells nearest the center first. Vented bunkers are gone for good and are not eligible. |
+| Laser markers | dropped "behind shields" | Up to 2 per pass, placed at a random X inside a bunker's span at the player line. 1.2 s telegraph, then a 0.5 s orbital beam that hits the player only, ignoring bunkers. |
+| Lives / waves / scoring | unspecified | 3 lives, 1.5 s respawn i-frames. Points: Raider 10, Grunt 20, Drone 30, Command 500. After a wave clears, the next spawns 32 px lower (capped at +160) and enemy fire cadence speeds up ×0.92. **All three bunkers rebuild at the start of each wave**, otherwise venting is only usable in wave 1. A bonus life every 10,000 pts. Endless, scored. |
+| Touch | unspecified | Phone-friendly on-screen buttons, following Starwarden: ◀ ▶ / Fire (hold) / Dash / Vent / weapon chip row. |
+| Formation layout | spawn domain X 200–1720, Y 100–500 | Columns 120 px apart (X 360–1560) and rows 80 px apart (Y 140–460), inside the spawn domain. That leaves room to march about 13 steps before the first drop. |
+| Enemy projectile speed | unspecified | Plasma bolts fall at 520 px/s. |
+
+---
+
+## 7. Code map (`src/projects/invader-protocol/`)
+
+| File | Responsibility |
+|---|---|
+| `constants.ts` | Every tuning number. |
+| `beat.ts` | `stepFrequency(N)`, the beat clock, and the perfect-beat window. It is the master clock for the grid, the music, and rhythm fire. |
+| `grid.ts` | Formation, march/drop/reverse on the beat, column snap and stun, frenzy, per-column enemy fire, barrier lookup. |
+| `player.ts` | Locomotion, micro-dash, lives and respawn. |
+| `weapons.ts` | Weapon firing, heat/overheat, switching. |
+| `projectiles.ts` | Swept collisions and damage rules: pierce, Drone armor, Grunt barriers, Siege splash, UFO hits, enemy shots vs. bunkers/beams/player, and scoring with bonus lives. |
+| `fragments.ts` | Enemy projectiles: plasma bolts and Grunt cluster fragments. |
+| `bunkers.ts` | Hex cells, absorption/charge, venting, UFO restore. |
+| `ufo.ts` | Apex Transponder passes, laser markers, reward. |
+| `game.ts` | `GameState`, wave setup, and the fixed-step `stepGame()` in plan order (input → player → beat → grid → enemy fire → weapons → projectiles → bunkers/beams → UFO → deaths → wave/game-over → effects). |
+| `effects.ts` | Particles, rings, floaters, shake, flashes. |
+| `audio.ts` | Beat-locked bassline with tier layers, and all SFX (Web Audio, synthesized). |
+| `input.ts` | Keyboard, mouse, gamepad, and touch merged into one per-frame `FrameInput`. |
+| `render.ts` | Canvas drawing and HUD in 1920×1080 logical space. |
+| `progress.ts` | localStorage best score and wave. |
+| `InvaderProtocol.tsx` | Phases, the 16:9 DPR-scaled canvas, the 120 Hz fixed-step loop, pause on blur, overlays, and touch controls. |

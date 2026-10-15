@@ -58,7 +58,8 @@
 .site-main:has(> .ion-perimeter.fullscreen),
 .site-main:has(> .scrapyard-ballistics.fullscreen),
 .site-main:has(> .feline-ballistics.fullscreen),
-.site-main:has(> .lux-tenebris.fullscreen) {
+.site-main:has(> .lux-tenebris.fullscreen),
+.site-main:has(> .invader-protocol.fullscreen) {
   max-width: none;
   padding: 0;
   display: flex;

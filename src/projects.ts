@@ -122,4 +122,12 @@ export const projects: Project[] = [
     icon: '🔦',
     accent: '#fcd34d',
   },
+  {
+    slug: 'invader-protocol',
+    title: 'Invader Protocol',
+    description: 'Break the marching alien lattice on the beat — four hot-running weapons, ventable hardlight bunkers, and a tempo that climbs as they fall.',
+    category: 'Space Arcade',
+    icon: '👾',
+    accent: '#e879f9',
+  },
 ]

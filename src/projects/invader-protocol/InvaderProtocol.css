@@ -1,0 +1,228 @@
+/* Fills the viewport below the site header, like Starwarden -- see the
+ * `:has()` override in App.css that widens `.site-main` for this page. */
+.invader-protocol.fullscreen {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  padding: 6px 20px 10px;
+  --ip-accent: #e879f9;
+}
+
+.invader-protocol .ip-game-area {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.invader-protocol .ip-canvas {
+  display: block;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: #05030f;
+  touch-action: none;
+}
+
+.invader-protocol .ip-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  background: rgba(5, 3, 15, 0.84);
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.invader-protocol .ip-overlay h1 {
+  margin: 0;
+  color: var(--ip-accent);
+  text-shadow: 0 0 24px rgba(232, 121, 249, 0.6);
+}
+
+.invader-protocol .ip-tagline {
+  color: var(--text-h);
+  opacity: 0.88;
+  max-width: 560px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.invader-protocol .ip-new-best {
+  color: var(--ip-accent);
+  font-weight: 700;
+}
+
+.invader-protocol .ip-controls {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  color: var(--text-h);
+  opacity: 0.9;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.invader-protocol .ip-controls kbd {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 6px;
+  font-size: 12px;
+}
+
+.invader-protocol .ip-primary,
+.invader-protocol .ip-secondary {
+  border-radius: 8px;
+  padding: 12px 28px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.invader-protocol .ip-primary {
+  background: var(--ip-accent);
+  color: #12041a;
+  border: none;
+}
+
+.invader-protocol .ip-secondary {
+  background: transparent;
+  color: var(--text-h);
+  border: 1px solid var(--border);
+}
+
+.invader-protocol .ip-best {
+  margin: 0;
+  color: var(--text-h);
+  opacity: 0.65;
+  font-size: 13px;
+}
+
+.invader-protocol .ip-corner-buttons {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 3;
+  display: flex;
+  gap: 6px;
+}
+
+.invader-protocol .ip-icon-btn {
+  background: rgba(5, 3, 15, 0.6);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--text-h);
+}
+
+.invader-protocol .ip-touch-hint {
+  display: none;
+  color: var(--text-h);
+  opacity: 0.6;
+  font-size: 12px;
+  margin: 0;
+}
+
+/* On-screen controls only on touch/coarse-pointer devices. */
+.invader-protocol .ip-touch-controls {
+  display: none;
+}
+
+@media (pointer: coarse), (hover: none) {
+  .invader-protocol .ip-touch-hint {
+    display: block;
+  }
+
+  .invader-protocol .ip-touch-controls {
+    display: flex;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 10px;
+    z-index: 1;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 0 12px;
+    pointer-events: none;
+  }
+}
+
+.invader-protocol .ip-move-pad,
+.invader-protocol .ip-action-pad,
+.invader-protocol .ip-weapon-chips {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: auto;
+}
+
+.invader-protocol .ip-touch-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.invader-protocol .ip-touch-btn {
+  background: rgba(232, 121, 249, 0.14);
+  border: 1px solid rgba(232, 121, 249, 0.5);
+  border-radius: 10px;
+  color: var(--text-h);
+  font-size: 14px;
+  font-weight: 700;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+
+.invader-protocol .ip-touch-btn:active {
+  background: rgba(232, 121, 249, 0.4);
+}
+
+.invader-protocol .ip-touch-move {
+  width: 62px;
+  height: 62px;
+  font-size: 20px;
+}
+
+.invader-protocol .ip-chip {
+  width: 38px;
+  height: 32px;
+  font-size: 13px;
+}
+
+.invader-protocol .ip-touch-small {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  font-size: 11px;
+}
+
+.invader-protocol .ip-touch-fire {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  font-size: 12px;
+  background: rgba(103, 232, 249, 0.18);
+  border-color: rgba(103, 232, 249, 0.55);
+}
+
+.invader-protocol .ip-touch-fire:active {
+  background: rgba(103, 232, 249, 0.42);
+}
