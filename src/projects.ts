@@ -130,4 +130,12 @@ export const projects: Project[] = [
     icon: '👾',
     accent: '#e879f9',
   },
+  {
+    slug: 'orbital-siege',
+    title: 'Orbital Siege',
+    description: 'Program an orbital platform’s strike timeline to crack rogue robot fortresses, layer by layer. Every tick is deterministic.',
+    category: 'Puzzles',
+    icon: '🪐',
+    accent: '#818cf8',
+  },
 ]

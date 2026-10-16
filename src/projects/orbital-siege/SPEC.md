@@ -3,10 +3,11 @@
 > Program an orbital platform's strike timeline to crack a rogue AI fortress, layer by layer.
 > Every tick is deterministic, so every failure is a flaw in the plan.
 
-Status: **planned — not yet built.** See [IMPLEMENTATION-PLAN.md](IMPLEMENTATION-PLAN.md) for the
-coding plan. That plan also resolves the gaps and contradictions in this spec, and reframes the
-theme for the family site: the targets are rogue robot fortresses, and the "collateral" is
-protected sites such as ruins, seed vaults and preserves.
+Status: **built.** Playable at `/orbital-siege`. Sections 1–7 are the original game design document.
+Sections 8–14 record how the build resolved its gaps and contradictions, the rules as coded, and the
+code map. For the family site the targets are rogue robot fortresses ("Sentinel" AI grids on
+abandoned mining worlds, no people anywhere), and the "collateral" is protected sites such as ruins,
+seed vaults and preserves. Explosions are stylized sparks and flashes.
 
 ---
 
@@ -135,3 +136,136 @@ Defenses operate in concentric strata from space to surface:
   * *Hyper-Velocity:* Clear in $3$ ticks or fewer.
   * *Surgical:* $0\%$ collateral damage to planetary research facilities or civilian habitation sectors.
 * **Dynamic Modifiers:** Planetary weather systems (e.g., solar storms that accelerate EMP effects, dust rings that intercept kinetic weapons).
+
+---
+
+# As built
+
+## 8. Rules and resolved gaps
+
+Everything is deterministic: there is no randomness anywhere in a mission.
+
+| Topic | GDD says | Built as |
+|---|---|---|
+| Heat "misfires" | Overheat causes stutter or misfire | No misfires (that would be RNG). A launch that would push heat over the cap **stutters one tick**, and can keep stuttering. Heat lands when a weapon discharges (after charge). The timeline previews heat and stutter live. |
+| Magnetosphere | Refracts lasers and neutralizes EMP, yet sample 3-2 uses lasers and EMP | Two tiers. **Ion Field (weak)** only scrambles guided missiles; an EMP aimed at it drops it for 2 ticks. **Magnetosphere (strong)** also refracts UV and drill lasers and swallows any single EMP; two or more EMPs landing on the same tick are all spent overloading it, which drops it for the EMP duration. Sample 3-2 uses the weak tier. |
+| Scrambled missile | "Redirects telemetry" | The missile lands one column along the field's drift (shown in intel). Off the map, it is lost. PDCs judge by the column it was **aimed** at. |
+| PDC vs. chaff timing | Chaff blinds the PDC in the sample | A projectile is **in flight** on the ticks strictly between launch and arrival. PDCs only shoot in-flight physical projectiles aimed into their zone: transit-1 weapons can't be hit, missiles and thermobarics are exposed 1 tick, lances 2. Chaff blinds every PDC whose zone covers its column on its arrival tick and the next. |
+| PDC ammo | "Exhausting ammunition" | Dropped. A PDC fires `barrels` shots per tick (default 1) by its priority: heaviest (lance 3, thermobaric 2, missile 1), nearest to impact, or first launched. Ties go to fire order. Armored PDCs ignore lasers. |
+| Kinetic shield | "Shatters shield (if uncharged)" | Strength 1–3. A laser or drill drains 1 and is absorbed. A lance against strength ≤1 shatters it (and is spent); against more it is destroyed. Missiles and thermobarics are blocked. Resonance passes through. An EMP collapses it for 2 ticks; an unpowered dome is down. No regeneration. |
+| Same-tick order | "EMP drops the shield as the lance arrives" | Fixed pipeline, below. |
+| Retaliation deadline | "Fires at Tick 5" | Batteries fire in the Defenses step, at the **end** of their tick. If one is EMP-disabled or unpowered then, it fires the first tick it is back. A battery whose power source is destroyed never fires. |
+| Winning | — | The mission is won the moment every objective is down (the grid goes dark, so batteries due that tick don't fire). It fails on a battery shot, a hit on a protected site marked hard (an abort), or reaching the last tick with objectives standing. |
+| Charge delay | Every weapon has one | Base weapons have charge 0; only the sector-4 resonance (2) and drill (1) charge. |
+| Thermobaric | Missing from matrix | Splashes its column and both neighbours (the whole surface in volatile air), wrecking exposed **light** structures. Shielded columns are spared; if its own column is shielded it is blocked outright. It is physical. |
+| Badges | Minimalist <60% energy, Hyper-Velocity ≤3 ticks | Per level: **Minimalist** = at most `minimalist` MW (calibrated by brute-force search), **Hyper-Velocity** = win by `parTick`, **Surgical** = no protected site hit (only on levels that have one). Judged at base stats. |
+
+### Tick pipeline (`sim.ts`)
+
+For T = 1..N:
+
+1. **Launch** — actions whose fire + charge (+ stutter) is T. Beams arrive the same tick.
+2. **Effects** — EMPs land (disable a structure, PDC, shield or field for 2 ticks, 3 in a solar
+   storm; a disabled power source cuts everything it powers) and chaff lands.
+3. **Interception** — dust rings shred everything in flight on their ticks, then each live,
+   powered, un-blinded PDC shoots by its priority.
+4. **Strikes** — beams first, then projectiles, each in fire order (launch tick, then plan
+   order). Each passes field → shield → armor. Destroyed sources de-power their links at once.
+   Win/abort is checked here.
+5. **Defenses** — batteries whose countdown is up fire. A shot loses the mission.
+6. **Upkeep** — heat cools by `cool`.
+
+`simulate(level, plan, platform)` returns the outcome, the reason and the first causal failure
+(for the debrief), an event log, per-shot fates, a snapshot per tick (for playback and scrubbing),
+energy used, win tick and collateral.
+
+## 9. Arsenal, defenses and modifiers
+
+| Weapon | Sector | Charge | Transit | MW | Heat | Physical | Kills |
+|---|---|---|---|---|---|---|---|
+| UV Laser | 1 | 0 | 0 | 20 | 4 | no | light, unarmored PDCs |
+| Kinetic Lance | 1 | 0 | 3 | 35 | 6 | yes | everything |
+| Chaff Canister | 1 | 0 | 1 | 10 | 1 | no | — (blinds PDCs) |
+| EMP Burst | 2 | 0 | 1 | 20 | 3 | no | — (disables) |
+| Hypersonic Missile | 2 | 0 | 2 | 20 | 3 | yes, guided | light, medium |
+| Thermobaric Cluster | 3 | 0 | 2 | 30 | 5 | yes | light (splash) |
+| Resonance Beam | 4 | 2 | 0 | 40 | 7 | no | light, through shields and fields |
+| Drill Laser | 4 | 1 | 0 | 35 | 6 | no | everything |
+
+Base platform: **100 MW** per engagement, **heat cap 10**, **cooling 3/tick**. Levels override these
+(e.g. 2-2 has 60 MW, 4-4 a heat cap of 7, the finale 130 MW and heat cap 12).
+
+Targets are surface columns, PDCs (laser, chaff, EMP), shields (EMP) or the field (EMP). Surface
+structures: Core and Hangar (objectives), Relay and Generator (power sources), Battery (countdown),
+Protected Site (soft or hard). Armor is light, medium or hardened; two sector-4 cores take 2 hits.
+Modifiers: solar storm (EMPs last 3 ticks), dust ring (physical projectiles in flight on listed
+ticks are destroyed), volatile atmosphere. Levels may also take weapons offline (1-3 has no chaff
+yet; 3-5 freezes chaff and EMP to force a decoy).
+
+## 10. Campaign, badges and progression
+
+24 levels in 4 sectors of 6 (`levels/sector1..4.ts`), each with a reference solution:
+
+- **S1 Kepler's Rock** (laser, lance, chaff): First Light, Hard Shell, Flak Umbrella, Chaff
+  Corridor, Countdown, Kepler Keep (a heat-budget finale).
+- **S2 Ferrous Belt** (+ EMP, missile): Dome Light, Pulse Window, Drift, Relay Web, Twin Spires,
+  Ferrous Heart.
+- **S3 Caldera Worlds** (+ thermobaric): Drone Nest, **Caldera Fortress** (the GDD's sample; its
+  documented solution wins on tick 4, and dropping the railgun laser is the 65 MW Minimalist line),
+  Volatile Air, Crossfire, Decoy Run, Caldera Crown.
+- **S4 Core Grid** (+ resonance, drill): Resonance, Overload, Twin Hearts, Thermal Limit, Solar
+  Storm, Sentinel Prime.
+
+Levels unlock one at a time. Every level was checked by brute force over all plans of up to three
+actions. Early levels teach one idea each and can take two actions; from 2-4 on (apart from 3-1, the
+thermobaric intro) none can be won in two. Each `minimalist` and `parTick` matches the cheapest
+solution that search found, or the reference solution where nothing shorter wins.
+
+Salvage: +3 on first clear, +1 per new badge. The **Refit Bay** sells Capacitor Bank (+10 MW, ×2,
+5), Heat Sink (+1 heat cap, ×2, 5), Cooling Loop (+1 cooling, ×1, 8) and the Targeting Computer (6),
+which marks the shots a PDC will bring down on the timeline. After 3 failed runs a level offers
+"Show solution".
+
+## 11. Daily puzzle (`daily.ts`)
+
+Seeded (mulberry32) from the local date `YYYYMMDD`, so everyone gets the same fortress. Built
+constructively: pick a killer (lance on a hardened core, missile on a medium core, or a thermobaric
+on three hangars) and its impact tick; add an ion field (missiles must be aimed off-target, often
+with a protected site where an uncorrected missile would land); add at least two of shield
+(countered by an EMP on its generator), PDC (chaff or a laser) and battery (a laser); add scenery.
+Energy is the solution's cost plus 10–20%, the timeline is 1–2 ticks longer than the impact. The
+solution must win cleanly on the planned tick, and a brute force over every plan of ≤2 actions must
+find no win; otherwise the next sub-seed is tried (up to 50, then a fixed backup). Dailies use the
+base platform; the save keeps today's best plan and a streak.
+
+## 12. Share codes and replays (`share.ts`)
+
+`OS1-<level>-<base64url(actions)>`, 2 bytes per action: weapon (3 bits), fire tick (4), target index
+into `targetsOf(level)` (5), 4 reserved bits. Daily codes use `D<date>` as the level, so any past
+daily can be loaded. Loading a code on the star map puts the plan into that level's sequencer (it
+runs on your current platform). The best plan per level (fewest MW, then earliest win) is saved
+with the platform it ran on and can be watched from the star map.
+
+## 13. Screens and save
+
+Star map → Mission (Recon / Sequence) → Execute (playback, then the debrief over it), with the Refit
+Bay off the star map. Sequencing: arm a weapon (tray or 1–8), pick a tick (timeline header or ←/→),
+tap a target on the cross-section or in the target chips. Cards can be dragged or tapped for ◀ ▶ ✕.
+Ctrl+Z/Y undo/redo, Enter executes, Esc disarms. Playback: ~1.2 s per tick, pause (Space), step
+(→), 2×, scrub, skip.
+
+One localStorage key, `orbital-siege:save`, validated field by field on load: per-level
+`{ cleared, badges, best, bestPlatform, bestEnergy, bestTick, fails }`, salvage, upgrades, the
+in-progress plan per level, the daily `{ date, best, streak, lastWin }`, and mute.
+
+## 14. Code map and verification
+
+- `OrbitalSiege.tsx` — screen machine, save, undo/redo. Screens: `StarMap`, `Mission` (+
+  `Timeline`, `IntelCard`), `Execute`, `Debrief`, `Refit`.
+- Pure logic: `types`, `weapons`, `defenses` (targets, intel text), `sim`, `solver` (brute force),
+  `levels/`, `daily`, `rng`, `share`, `progress`, `upgrades`, `badges`.
+- `render/battlefield.ts` — the canvas cross-section for planning and playback; `useCanvas.ts` and
+  `audio.ts` follow scrapyard-ballistics.
+- `selfcheck.ts` — DEV only: simulates every reference solution and generates the next 30 dailies,
+  logging problems with `console.error`.
+

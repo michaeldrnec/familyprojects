@@ -1,0 +1,963 @@
+/* Fills the viewport below the site header like the repo's other canvas
+ * games -- see the `:has()` override in App.css. Deep-space navy with the
+ * project's indigo accent; each weapon brings its own color via --wc. */
+.orbital-siege.fullscreen {
+  --os-ink: #e0e7ff;
+  --os-muted: #94a3c8;
+  --os-bg: #060818;
+  --os-panel: #0d1230;
+  --os-panel-2: #121a40;
+  --os-line: rgba(129, 140, 248, 0.28);
+  --os-accent: #818cf8;
+  --os-good: #4ade80;
+  --os-bad: #f87171;
+  --os-warn: #fbbf24;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: radial-gradient(ellipse at 70% -10%, #1b1f55 0%, var(--os-bg) 55%);
+  color: var(--os-ink);
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.orbital-siege .os-mute {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 5;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--os-line);
+  background: rgba(6, 8, 24, 0.8);
+  cursor: pointer;
+}
+
+.orbital-siege .os-screen {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: auto;
+  padding: 10px 16px 56px;
+}
+
+/* The screen scrolls; its sections keep their natural height. */
+.orbital-siege .os-screen > * {
+  flex-shrink: 0;
+}
+
+.orbital-siege h1,
+.orbital-siege h2,
+.orbital-siege h3 {
+  margin: 0;
+  color: #fff;
+  letter-spacing: 0.02em;
+}
+
+.orbital-siege h1 {
+  font-size: 26px;
+}
+
+.orbital-siege h2 {
+  font-size: 17px;
+}
+
+.orbital-siege h3 {
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #c7d2fe;
+}
+
+.orbital-siege p {
+  margin: 4px 0;
+  line-height: 1.45;
+}
+
+.orbital-siege .os-muted {
+  color: var(--os-muted);
+}
+
+.orbital-siege kbd {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  padding: 0 4px;
+  border: 1px solid var(--os-line);
+  border-radius: 3px;
+  color: var(--os-muted);
+}
+
+/* ---------- buttons & bits ---------- */
+
+.orbital-siege .os-btn {
+  font: inherit;
+  color: var(--os-ink);
+  background: var(--os-panel-2);
+  border: 1px solid var(--os-line);
+  border-radius: 8px;
+  padding: 7px 12px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.orbital-siege .os-btn:hover:not(:disabled) {
+  border-color: var(--os-accent);
+  background: #1a2358;
+}
+
+.orbital-siege .os-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.orbital-siege .os-btn.on {
+  border-color: var(--os-accent);
+  color: #fff;
+}
+
+.orbital-siege .os-btn-primary {
+  background: linear-gradient(180deg, #6366f1, #4338ca);
+  border-color: #a5b4fc;
+  color: #fff;
+  font-weight: 700;
+}
+
+.orbital-siege .os-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, #818cf8, #4f46e5);
+}
+
+.orbital-siege .os-btn.danger {
+  border-color: var(--os-bad);
+  color: var(--os-bad);
+}
+
+.orbital-siege .os-btn.subtle {
+  background: transparent;
+  color: var(--os-muted);
+}
+
+.orbital-siege .os-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.orbital-siege .os-panel {
+  background: rgba(13, 18, 48, 0.85);
+  border: 1px solid var(--os-line);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.orbital-siege .os-input {
+  flex: 1;
+  min-width: 0;
+  font: 13px ui-monospace, Menlo, monospace;
+  color: var(--os-ink);
+  background: var(--os-bg);
+  border: 1px solid var(--os-line);
+  border-radius: 8px;
+  padding: 7px 10px;
+}
+
+.orbital-siege .os-error {
+  color: var(--os-bad);
+}
+
+.orbital-siege .os-salvage {
+  color: var(--os-warn);
+  font-weight: 700;
+}
+
+.orbital-siege .os-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.orbital-siege .os-bar h2 {
+  flex: 1;
+  min-width: 160px;
+}
+
+.orbital-siege .os-tick {
+  font: 700 15px ui-monospace, Menlo, monospace;
+  color: #c7d2fe;
+}
+
+/* ---------- star map ---------- */
+
+.orbital-siege .os-map-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.orbital-siege .os-map-title > div:first-child {
+  max-width: 620px;
+}
+
+.orbital-siege .os-map-stats {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font: 700 15px ui-monospace, Menlo, monospace;
+}
+
+.orbital-siege .os-map-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
+  gap: 14px;
+  align-items: start;
+}
+
+.orbital-siege .os-sectors {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orbital-siege .os-sector {
+  background:
+    radial-gradient(circle at 8% 50%, rgba(129, 140, 248, 0.14), transparent 50%),
+    rgba(13, 18, 48, 0.7);
+  border: 1px solid var(--os-line);
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.orbital-siege .os-sector.locked {
+  opacity: 0.5;
+}
+
+.orbital-siege .os-sector-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.orbital-siege .os-nodes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.orbital-siege .os-node {
+  font: inherit;
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  border: 2px solid var(--os-line);
+  background: radial-gradient(circle at 35% 30%, #3b3f8f, #12163a 70%);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.orbital-siege .os-node:disabled {
+  cursor: default;
+  background: #0b0e24;
+}
+
+.orbital-siege .os-node.cleared {
+  border-color: var(--os-good);
+}
+
+.orbital-siege .os-node.selected {
+  outline: 3px solid var(--os-accent);
+  outline-offset: 2px;
+}
+
+.orbital-siege .os-node-id {
+  font: 700 14px ui-monospace, Menlo, monospace;
+}
+
+.orbital-siege .os-pips {
+  display: flex;
+  gap: 3px;
+}
+
+.orbital-siege .os-pips i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #2a2f5a;
+}
+
+.orbital-siege .os-pips i.on {
+  background: var(--os-warn);
+  box-shadow: 0 0 4px var(--os-warn);
+}
+
+.orbital-siege .os-map-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.orbital-siege .os-badges {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.orbital-siege .os-badges li {
+  opacity: 0.55;
+}
+
+.orbital-siege .os-badges li.got {
+  opacity: 1;
+}
+
+.orbital-siege .os-badges em {
+  color: var(--os-warn);
+  font-style: normal;
+  font-weight: 700;
+}
+
+.orbital-siege .os-howto summary {
+  cursor: pointer;
+  font-weight: 700;
+  color: #c7d2fe;
+}
+
+.orbital-siege .os-howto ol {
+  padding-left: 18px;
+  margin: 8px 0 0;
+  line-height: 1.5;
+}
+
+.orbital-siege .os-reset {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* ---------- mission ---------- */
+
+.orbital-siege .os-meters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  font: 12px ui-monospace, Menlo, monospace;
+}
+
+.orbital-siege .os-energy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 130px;
+}
+
+.orbital-siege .os-meter {
+  height: 6px;
+  border-radius: 3px;
+  background: #1e2550;
+  overflow: hidden;
+}
+
+.orbital-siege .os-meter > div {
+  height: 100%;
+  background: linear-gradient(90deg, #6366f1, #a5b4fc);
+}
+
+.orbital-siege .os-energy.over {
+  color: var(--os-bad);
+}
+
+.orbital-siege .os-energy.over .os-meter > div {
+  background: var(--os-bad);
+}
+
+.orbital-siege .os-mission-main,
+.orbital-siege .os-exec-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 320px);
+  gap: 10px;
+}
+
+.orbital-siege .os-field {
+  position: relative;
+  height: clamp(240px, 46vh, 520px);
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--os-line);
+}
+
+.orbital-siege .os-execute .os-field {
+  height: clamp(280px, 62vh, 680px);
+}
+
+.orbital-siege .os-field canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: manipulation;
+}
+
+.orbital-siege .os-field canvas.armed {
+  cursor: crosshair;
+}
+
+.orbital-siege .os-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  background: rgba(127, 29, 29, 0.92);
+  border: 1px solid var(--os-bad);
+  border-radius: 8px;
+  padding: 6px 12px;
+  max-width: 90%;
+  text-align: center;
+}
+
+.orbital-siege .os-side {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.orbital-siege .os-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.orbital-siege .os-tabs button {
+  flex: 1;
+  font: inherit;
+  color: var(--os-muted);
+  background: transparent;
+  border: 1px solid var(--os-line);
+  border-radius: 8px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.orbital-siege .os-tabs button.active {
+  color: #fff;
+  background: var(--os-panel-2);
+  border-color: var(--os-accent);
+}
+
+.orbital-siege .os-intel {
+  background: rgba(13, 18, 48, 0.85);
+  border: 1px solid var(--os-line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  flex: 1;
+  overflow: auto;
+  max-height: 46vh;
+}
+
+.orbital-siege .os-intel ul {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.45;
+}
+
+.orbital-siege .os-intel li + li {
+  margin-top: 4px;
+}
+
+.orbital-siege .os-mods {
+  list-style: none;
+  padding-left: 0 !important;
+  color: #fde68a;
+}
+
+.orbital-siege .os-tip {
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.14);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.orbital-siege .os-goals {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--os-muted);
+}
+
+.orbital-siege .os-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.orbital-siege .os-weapon {
+  font: inherit;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  align-items: center;
+  text-align: left;
+  min-width: 128px;
+  flex: 1 1 128px;
+  max-width: 200px;
+  padding: 6px 8px;
+  color: var(--os-ink);
+  background: var(--os-panel);
+  border: 1px solid var(--os-line);
+  border-left: 4px solid var(--wc);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.orbital-siege .os-weapon.armed {
+  background: color-mix(in srgb, var(--wc) 22%, var(--os-panel));
+  border-color: var(--wc);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--wc) 50%, transparent);
+}
+
+.orbital-siege .os-weapon-icon {
+  grid-row: span 2;
+  font-size: 20px;
+}
+
+.orbital-siege .os-weapon-name {
+  font-weight: 700;
+}
+
+.orbital-siege .os-weapon-stats {
+  font: 10px ui-monospace, Menlo, monospace;
+  color: var(--os-muted);
+}
+
+.orbital-siege .os-aim {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.orbital-siege .os-aim-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.orbital-siege .os-chip-btn {
+  font: inherit;
+  font-size: 12px;
+  color: var(--os-ink);
+  background: #1a2050;
+  border: 1px solid var(--os-line);
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.orbital-siege .os-chip-btn:hover {
+  border-color: var(--os-accent);
+}
+
+/* ---------- timeline ---------- */
+
+.orbital-siege .os-timeline {
+  display: grid;
+  gap: 4px;
+  overflow-x: auto;
+  background: rgba(13, 18, 48, 0.6);
+  border: 1px solid var(--os-line);
+  border-radius: 12px;
+  padding: 8px;
+}
+
+.orbital-siege .os-tl-head {
+  font: 700 12px ui-monospace, Menlo, monospace;
+  color: var(--os-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+.orbital-siege .os-tl-head.active {
+  color: #fff;
+  border-color: var(--os-accent);
+  background: rgba(99, 102, 241, 0.25);
+}
+
+.orbital-siege .os-tl-col {
+  min-height: 74px;
+  border-radius: 6px;
+  background: rgba(6, 8, 24, 0.6);
+  border: 1px dashed rgba(129, 140, 248, 0.15);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 3px;
+  cursor: pointer;
+}
+
+.orbital-siege .os-tl-col.active {
+  border-color: rgba(129, 140, 248, 0.6);
+  background: rgba(99, 102, 241, 0.1);
+}
+
+.orbital-siege .os-tl-col.droppable {
+  border-style: solid;
+}
+
+.orbital-siege .os-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  font-size: 11px;
+  line-height: 1.2;
+  padding: 3px 4px;
+  border-radius: 6px;
+  background: var(--os-panel-2);
+  border: 1px solid;
+  border-left-width: 3px;
+  cursor: grab;
+  min-width: 0;
+}
+
+.orbital-siege .os-card.selected {
+  outline: 2px solid #fff;
+}
+
+.orbital-siege .os-card.stutter {
+  animation: os-amber 0.9s ease-in-out infinite alternate;
+}
+
+@keyframes os-amber {
+  from {
+    background: var(--os-panel-2);
+  }
+  to {
+    background: rgba(251, 191, 36, 0.35);
+  }
+}
+
+.orbital-siege .os-card-icon {
+  font-size: 13px;
+}
+
+.orbital-siege .os-card-target {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.orbital-siege .os-card-arc {
+  font: 10px ui-monospace, Menlo, monospace;
+  color: var(--os-muted);
+}
+
+.orbital-siege .os-card-arc b {
+  color: var(--os-warn);
+}
+
+.orbital-siege .os-card-down {
+  font-size: 10px;
+  color: var(--os-bad);
+}
+
+.orbital-siege .os-card-ctl {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+}
+
+.orbital-siege .os-card-ctl button {
+  flex: 1;
+  font-size: 11px;
+  padding: 2px 0;
+  border-radius: 4px;
+  border: 1px solid var(--os-line);
+  background: #0b0f2c;
+  color: #fff;
+  cursor: pointer;
+}
+
+.orbital-siege .os-tl-heat {
+  position: relative;
+  height: 30px;
+  border-radius: 4px;
+  background: #0b0f2c;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.orbital-siege .os-heat-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(0deg, #f97316, #fde047);
+  opacity: 0.6;
+}
+
+.orbital-siege .os-heat-bar.hot {
+  opacity: 0.85;
+}
+
+.orbital-siege .os-heat-bar.max {
+  opacity: 1;
+  background: linear-gradient(0deg, #dc2626, #f97316);
+}
+
+.orbital-siege .os-tl-heat span {
+  position: relative;
+  font: 700 10px ui-monospace, Menlo, monospace;
+  text-shadow: 0 0 3px #000;
+}
+
+.orbital-siege .os-tl-def {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 18px;
+}
+
+.orbital-siege .os-chip {
+  font-size: 10px;
+  border-radius: 4px;
+  padding: 1px 3px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orbital-siege .os-chip.bad {
+  background: rgba(220, 38, 38, 0.35);
+  color: #fecaca;
+}
+
+.orbital-siege .os-chip.dust {
+  background: rgba(120, 113, 108, 0.4);
+}
+
+.orbital-siege .os-chip.emp {
+  background: rgba(103, 232, 249, 0.2);
+  color: #a5f3fc;
+}
+
+.orbital-siege .os-chip.chaff {
+  background: rgba(226, 232, 240, 0.15);
+}
+
+.orbital-siege .os-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.orbital-siege .os-problem {
+  flex: 1;
+  min-width: 120px;
+  font-size: 12px;
+  color: var(--os-bad);
+  text-align: right;
+}
+
+/* ---------- execute & debrief ---------- */
+
+.orbital-siege .os-log-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: rgba(13, 18, 48, 0.85);
+  border: 1px solid var(--os-line);
+  border-radius: 12px;
+  padding: 10px;
+  height: clamp(280px, 62vh, 680px);
+}
+
+.orbital-siege .os-log {
+  flex: 1;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  line-height: 1.4;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.orbital-siege .os-log b {
+  font-family: ui-monospace, Menlo, monospace;
+  color: var(--os-muted);
+}
+
+.orbital-siege .os-log li.bad {
+  color: #fca5a5;
+}
+
+.orbital-siege .os-log li.good {
+  color: #fdba74;
+}
+
+.orbital-siege .os-log li.win {
+  color: var(--os-good);
+  font-weight: 700;
+}
+
+.orbital-siege .os-playbar {
+  flex-wrap: nowrap;
+}
+
+.orbital-siege .os-scrub {
+  flex: 1;
+  min-width: 60px;
+  accent-color: var(--os-accent);
+}
+
+.orbital-siege .os-debrief-wrap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(3, 5, 16, 0.55);
+  overflow: auto;
+}
+
+.orbital-siege .os-debrief {
+  width: min(460px, 100%);
+  max-height: 100%;
+  overflow: auto;
+  background: rgba(13, 18, 48, 0.97);
+  border: 2px solid var(--os-line);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+}
+
+.orbital-siege .os-debrief.win {
+  border-color: var(--os-good);
+}
+
+.orbital-siege .os-debrief.lose {
+  border-color: var(--os-bad);
+}
+
+.orbital-siege .os-reason {
+  font-weight: 700;
+}
+
+.orbital-siege .os-cause {
+  color: #fecaca;
+}
+
+.orbital-siege .os-debrief-btns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+/* ---------- refit ---------- */
+
+.orbital-siege .os-upgrades {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.orbital-siege .os-upgrade {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.orbital-siege .os-upgrade button {
+  margin-top: auto;
+}
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 760px) {
+  .orbital-siege .os-screen {
+    padding: 8px 10px 56px;
+  }
+
+  .orbital-siege .os-map-grid,
+  .orbital-siege .os-mission-main,
+  .orbital-siege .os-exec-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .orbital-siege .os-field {
+    height: 250px;
+  }
+
+  .orbital-siege .os-execute .os-field {
+    height: 300px;
+  }
+
+  .orbital-siege .os-log-wrap {
+    height: 180px;
+  }
+
+  .orbital-siege .os-intel {
+    max-height: none;
+  }
+
+  .orbital-siege .os-weapon {
+    min-width: 0;
+    flex: 1 1 96px;
+  }
+
+  .orbital-siege .os-weapon-stats {
+    display: none;
+  }
+
+  .orbital-siege .os-timeline {
+    padding: 4px;
+    gap: 3px;
+  }
+
+  .orbital-siege .os-node {
+    width: 52px;
+    height: 52px;
+  }
+
+  .orbital-siege .os-playbar {
+    flex-wrap: wrap;
+  }
+
+  .orbital-siege .os-problem {
+    order: 10;
+    flex-basis: 100%;
+    text-align: left;
+  }
+}

@@ -25,6 +25,9 @@ const ScrapyardBallistics = lazy(() => import('./projects/scrapyard-ballistics/S
 // Feline Ballistics also uses matter-js; the physics code lands in a chunk
 // shared with Scrapyard rather than the main bundle.
 const FelineBallistics = lazy(() => import('./projects/feline-ballistics/FelineBallistics'))
+// Orbital Siege carries 24 levels, a puzzle generator and a brute-force
+// solver, so it loads on demand too.
+const OrbitalSiege = lazy(() => import('./projects/orbital-siege/OrbitalSiege'))
 
 function App() {
   return (
@@ -56,6 +59,14 @@ function App() {
           element={
             <Suspense fallback={<p>Loading…</p>}>
               <FelineBallistics />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/orbital-siege"
+          element={
+            <Suspense fallback={<p>Loading…</p>}>
+              <OrbitalSiege />
             </Suspense>
           }
         />

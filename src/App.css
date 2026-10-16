@@ -59,7 +59,8 @@
 .site-main:has(> .scrapyard-ballistics.fullscreen),
 .site-main:has(> .feline-ballistics.fullscreen),
 .site-main:has(> .lux-tenebris.fullscreen),
-.site-main:has(> .invader-protocol.fullscreen) {
+.site-main:has(> .invader-protocol.fullscreen),
+.site-main:has(> .orbital-siege.fullscreen) {
   max-width: none;
   padding: 0;
   display: flex;
