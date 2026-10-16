@@ -1,5 +1,5 @@
-/* Fills the viewport below the site header, like Starwarden -- see the
- * `:has()` override in App.css that widens `.site-main` for this page. */
+/* Fills the viewport below the site header -- see `.site-main.is-fullscreen`
+ * in App.css; the canvas is then fitted to 16:9 inside .ip-game-area. */
 .invader-protocol.fullscreen {
   display: flex;
   height: 100%;

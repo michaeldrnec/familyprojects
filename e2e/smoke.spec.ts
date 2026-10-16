@@ -43,6 +43,12 @@ for (const p of projects) {
       await page.waitForTimeout(100)
     }
     expect(sizes.size).toBe(1)
+    // Full-screen games fill the whole width under the header.
+    const widths = await page.evaluate(() => {
+      const main = document.querySelector('.site-main.is-fullscreen')
+      return main?.firstElementChild ? [main.clientWidth, main.firstElementChild.getBoundingClientRect().width] : null
+    })
+    if (widths) expect(Math.round(widths[1])).toBe(widths[0])
   })
 }
 

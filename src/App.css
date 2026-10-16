@@ -87,6 +87,14 @@
   min-height: 0;
 }
 
+/* The game's root fills that space edge to edge. As a plain row-flex item it
+ * would otherwise shrink to its content's width -- and games that size their
+ * canvas from their container (Invader Protocol) would then shrink with it. */
+.site-main.is-fullscreen > * {
+  flex: 1;
+  min-width: 0;
+}
+
 @media (max-width: 520px) {
   .site-header {
     padding: 10px 16px;
