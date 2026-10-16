@@ -116,7 +116,110 @@
   font-size: 13px;
 }
 
+/* Progress note from the game's save ("12/24 levels", "Best 4,200"). */
+.hd-note {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-h);
+  background: color-mix(in srgb, var(--card-accent) 22%, transparent);
+}
+
+.hd-feature .hd-note {
+  display: inline-block;
+  margin: 0 0 14px;
+}
+
+.hd-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.hd-filter {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.hd-filter:hover {
+  border-color: var(--accent);
+}
+
+.hd-filter.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+  color: var(--text-h);
+}
+
+.hd-continue {
+  margin-bottom: 18px;
+}
+
+.hd-continue h2 {
+  margin: 0 0 10px;
+  font-size: 18px;
+}
+
+.hd-continue-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.hd-continue-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--card-accent) 35%, var(--border));
+  background: linear-gradient(120deg, color-mix(in srgb, var(--card-accent) 12%, var(--bg-alt)), var(--bg-alt) 70%);
+  color: var(--text);
+  text-decoration: none;
+  min-width: 0;
+}
+
+.hd-continue-card:hover {
+  border-color: var(--card-accent);
+}
+
+.hd-continue-icon {
+  font-size: 26px;
+}
+
+.hd-continue-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.hd-continue-text strong {
+  color: var(--text-h);
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hd-empty {
+  padding: 32px 0;
+  text-align: center;
+}
+
 @media (max-width: 760px) {
+  .hd-continue-row {
+    grid-template-columns: 1fr;
+  }
   .hd-feature {
     flex-direction: column-reverse;
     text-align: center;

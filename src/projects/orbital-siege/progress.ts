@@ -1,14 +1,14 @@
-// Persistent save (SPEC.md section 13), following scrapyard-ballistics:
-// one localStorage key, every field validated on load, every write wrapped
-// in try/catch so private browsing still plays fine without persistence.
+// Persistent save (SPEC.md section 13), stored through the site's shared
+// storage helper (per player profile, versioned, never throws). Every field
+// is validated on load. Sound is muted site-wide (shared/audio.ts), so
+// it isn't part of this save.
+import { createStore } from '../../shared/storage'
 import { badgesFor, earnedBadges, type BadgeId } from './badges'
 import { LEVELS } from './levels'
 import type { SimResult } from './sim'
 import type { Level, Plan, Platform } from './types'
 import { UPGRADES, type Owned, type UpgradeId } from './upgrades'
 import { WEAPONS } from './weapons'
-
-const STORAGE_KEY = 'orbital-siege:save'
 
 export interface LevelSave {
   cleared: boolean
@@ -35,7 +35,6 @@ export interface SaveData {
   owned: Owned
   drafts: Record<string, Plan> // the in-progress plan per level
   daily: DailySave
-  muted: boolean
 }
 
 export function freshSave(): SaveData {
@@ -45,7 +44,6 @@ export function freshSave(): SaveData {
     owned: {},
     drafts: {},
     daily: { date: '', best: null, bestEnergy: 0, bestTick: 0, streak: 0, lastWin: '' },
-    muted: false,
   }
 }
 
@@ -94,11 +92,11 @@ function parseLevelSave(x: unknown): LevelSave | null {
   }
 }
 
-export function loadSave(): SaveData {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return freshSave()
-    const p = JSON.parse(raw)
+const store = createStore<SaveData>({
+  key: 'orbital-siege:save',
+  version: 1,
+  defaults: freshSave,
+  parse(p) {
     const save = freshSave()
     if (p.levels && typeof p.levels === 'object') {
       for (const [id, v] of Object.entries(p.levels)) {
@@ -129,28 +127,20 @@ export function loadSave(): SaveData {
         lastWin: str(p.daily.lastWin),
       }
     }
-    save.muted = p.muted === true
     return save
-  } catch {
-    return freshSave()
-  }
-}
+  },
+  summary: {
+    slug: 'orbital-siege',
+    describe(save) {
+      const cleared = LEVELS.filter((l) => save.levels[l.id]?.cleared).length
+      return cleared > 0 ? `${cleared}/${LEVELS.length} fortresses` : null
+    },
+  },
+})
 
-export function writeSave(save: SaveData) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(save))
-  } catch {
-    // Storage disabled -- the session still plays, it just won't persist.
-  }
-}
-
-export function clearSave() {
-  try {
-    window.localStorage.removeItem(STORAGE_KEY)
-  } catch {
-    // ignore
-  }
-}
+export const loadSave = store.load
+export const writeSave = store.save
+export const clearSave = store.clear
 
 export function levelSave(save: SaveData, id: string): LevelSave {
   return save.levels[id] ?? emptyLevelSave()

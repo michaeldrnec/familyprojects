@@ -1,26 +1,26 @@
-// Persistent bests across sessions, following starwarden/progress.ts: a
-// narrow localStorage record (best score, furthest wave), tolerant of
-// storage being unavailable.
-const STORAGE_KEY = 'invader-protocol:progress'
+// Persistent bests across sessions (best score, furthest wave), saved
+// through the site's shared storage helper.
+import { createStore } from '../../shared/storage'
 
 export interface Progress {
   bestScore: number
   bestWave: number
 }
 
-const DEFAULT_PROGRESS: Progress = { bestScore: 0, bestWave: 0 }
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 
-export function loadProgress(): Progress {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_PROGRESS }
-    const parsed = JSON.parse(raw)
-    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
-    return { bestScore: num(parsed.bestScore), bestWave: num(parsed.bestWave) }
-  } catch {
-    return { ...DEFAULT_PROGRESS }
-  }
-}
+const store = createStore<Progress>({
+  key: 'invader-protocol:progress',
+  version: 1,
+  defaults: () => ({ bestScore: 0, bestWave: 0 }),
+  parse: (p) => ({ bestScore: num(p.bestScore), bestWave: num(p.bestWave) }),
+  summary: {
+    slug: 'invader-protocol',
+    describe: (p) => (p.bestScore > 0 ? `Best ${p.bestScore.toLocaleString()} · wave ${p.bestWave}` : null),
+  },
+})
+
+export const loadProgress = store.load
 
 // Returns the updated record and whether the score is a new best.
 export function recordRun(score: number, wave: number): { progress: Progress; isNewBest: boolean } {
@@ -29,10 +29,6 @@ export function recordRun(score: number, wave: number): { progress: Progress; is
     bestScore: Math.max(current.bestScore, score),
     bestWave: Math.max(current.bestWave, wave),
   }
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-  } catch {
-    // Private browsing / storage disabled -- the run still counted, just not saved.
-  }
+  store.save(next)
   return { progress: next, isNewBest: score > current.bestScore }
 }

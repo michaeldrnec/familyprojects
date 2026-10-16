@@ -3,7 +3,8 @@
 > Hold the line in a scrolling alien warzone — dodge and blast waves of enemies, and survive as
 > long as your fuel and power crystals hold out.
 
-Status: **draft spec — not yet built**. This document describes the design; no game code exists yet.
+Status: **built.** Playable at `/starwarden`. This is the original design document. The build went beyond it in
+places, most visibly with on-screen touch controls (the spec was keyboard-only) and a pause screen.
 
 ## 1. Pitch
 

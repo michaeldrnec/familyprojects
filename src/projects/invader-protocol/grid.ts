@@ -27,7 +27,7 @@ import {
   STEP_DY,
   type InvaderType,
 } from './constants'
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export interface Invader {
   id: number

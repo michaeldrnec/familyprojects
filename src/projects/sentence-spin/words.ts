@@ -9,6 +9,8 @@
 // since it's built from web-crawl frequency, not general vocabulary. This
 // list is intentionally large (~370k words) and includes some obscure or
 // technical terms, similar in spirit to a Scrabble dictionary.
+import { isFamilySafe } from '../../shared/familySafe'
+
 export const DICTIONARY: string[] = [
   'AA','AAA','AAH','AAHED','AAHING','AAHS','AAL','AALII','AALIIS','AALS','AAM','AANI','AARDVARK','AARDVARKS','AARDWOLF',
   'AARDWOLVES','AARGH','AARON','AARONIC','AARONICAL','AARONITE','AARONITIC','AARRGH','AARRGHH','AARU','AAS','AASVOGEL','AASVOGELS','AB','ABA',
@@ -24690,5 +24692,5 @@ export function isValidWord(letter: string, word: string): boolean {
   const upper = word.trim().toUpperCase()
   if (upper.length < 2) return false
   if (upper[0] !== letter.toUpperCase()) return false
-  return DICTIONARY_SET.has(upper)
+  return DICTIONARY_SET.has(upper) && isFamilySafe(upper)
 }

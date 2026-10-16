@@ -9,7 +9,7 @@ import { drawRoom } from '../render/room'
 import { drawObjects } from '../render/objects'
 import { drawCat, perchedPose, poseFromCat } from '../render/cat'
 import { Fx, drawAimPreview } from '../render/fx'
-import { useCanvasLoop } from '../useCanvas'
+import { useCanvasLoop } from '../../../shared/useCanvasLoop'
 import * as audio from '../audio'
 
 interface Props {

@@ -1,7 +1,7 @@
 // Explosion effects: a burst of particles generated once at creation time
 // (from the run's seeded Rng) and then just aged forward -- cheap to step
 // every frame since nothing is re-simulated, only `age` advances.
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export interface ExplosionParticle {
   angle: number

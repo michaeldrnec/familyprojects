@@ -4,7 +4,7 @@
 // A wave "ends" once its spawn quota has fired and the board is clear (see
 // SolarWard.tsx's wave-clear check).
 import { RIM_POST_COUNT, spawnDreadnought, type Dreadnought, type WaveTuning } from './dreadnoughts'
-import { shuffle, type Rng } from './rng'
+import { shuffle, type Rng } from '../../shared/rng'
 
 export const SIEGE_UNLOCK_WAVE = 3 // 0-indexed -- "wave 4" as shown to the player
 

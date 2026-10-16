@@ -45,7 +45,7 @@ import { markerDone, markerFiring, nextUfoDelay, spawnUfo, updateUfo, type Marke
 import { burst, floater, flash, newEffects, ring, shake, updateEffects, type Effects } from './effects'
 import { addScore, damageInvader, damageUfo, hitPlayer, stepEnemyShots, stepPlayerShots } from './projectiles'
 import type { FrameInput } from './input'
-import { makeRng, type Rng } from './rng'
+import { makeRng, type Rng } from '../../shared/rng'
 import * as audio from './audio'
 
 export interface PendingKill {

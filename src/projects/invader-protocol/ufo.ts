@@ -16,7 +16,7 @@ import {
   VIEW_W,
 } from './constants'
 import { BUNKER_HALF_W, isStanding, type Bunker } from './bunkers'
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export interface Ufo {
   x: number

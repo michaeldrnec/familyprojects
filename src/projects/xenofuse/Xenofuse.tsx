@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { generateBomb, type Bomb, type Puzzle } from './bombGen'
-import { makeRng } from './rng'
+import { makeRng } from '../../shared/rng'
+import { usePauseOnHide } from '../../shared/usePauseOnHide'
 import './Xenofuse.css'
 
 // Tunable constants (spec.md section 12's open questions, resolved for v1):
@@ -48,7 +49,7 @@ function stageLabel(puzzle: Puzzle): string {
   }
 }
 
-type Phase = 'intro' | 'playing' | 'won' | 'lost'
+type Phase = 'intro' | 'playing' | 'paused' | 'won' | 'lost'
 
 function newRunSeed(): number {
   return Math.floor(Math.random() * 1_000_000_000)
@@ -87,6 +88,9 @@ function Xenofuse() {
     }, TICK_MS)
     return () => window.clearInterval(id)
   }, [phase])
+
+  // Leaving mid-bomb freezes the timer and hides the panel until resumed.
+  usePauseOnHide(() => setPhase('paused'), phase === 'playing')
 
   function startBomb(index: number, seed: number) {
     const rng = makeRng(seed + index * 104729)
@@ -253,6 +257,18 @@ function Xenofuse() {
               </button>
 
               {wrongFlash && <p className="xf-wrong-msg">Not it — try again. (−{WRONG_ANSWER_PENALTY}s)</p>}
+            </div>
+          )}
+
+          {phase === 'paused' && (
+            <div className="xf-result">
+              <p className="xf-result-headline">⏸ Paused</p>
+              <p className="xf-result-detail">The timer is frozen, and the panel stays hidden until you resume.</p>
+              <div className="xf-result-buttons">
+                <button type="button" className="xf-primary" onClick={() => setPhase('playing')}>
+                  Resume
+                </button>
+              </div>
             </div>
           )}
 

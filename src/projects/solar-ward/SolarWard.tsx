@@ -37,11 +37,15 @@ import {
   nextCombo,
 } from './scoring'
 import { OVERCHARGE_FLASH_DURATION, OVERCHARGE_MAX_CHARGES, OVERCHARGE_RADIUS, OVERCHARGE_RECHARGE_TIME } from './overcharge'
-import { makeRng, type Rng } from './rng'
+import { makeRng, type Rng } from '../../shared/rng'
 import * as audio from './audio'
+import { scaledContext, useHiDpiCanvas } from '../../shared/hiDpiCanvas'
+import { useMuted } from '../../shared/audio'
+import { useReducedMotion } from '../../shared/motion'
+import { usePauseOnHide } from '../../shared/usePauseOnHide'
 import './SolarWard.css'
 
-type Phase = 'intro' | 'playing' | 'wave-cleared' | 'gameover'
+type Phase = 'intro' | 'playing' | 'paused' | 'wave-cleared' | 'gameover'
 
 const FIRE_COOLDOWN = 0.16
 const SHOT_SPEED = 480
@@ -342,24 +346,55 @@ function SolarWard() {
   const [finalScore, setFinalScore] = useState(0)
   const [waveBonus, setWaveBonus] = useState(0)
   const [clearedWaveNumber, setClearedWaveNumber] = useState(1)
-  const [muted, setMuted] = useState(false)
+  const [muted, toggleSiteMute] = useMuted()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  useHiDpiCanvas(canvasRef, VIEW_SIZE, VIEW_SIZE, { capToLogical: true })
   const rafRef = useRef<number | null>(null)
   const phaseRef = useRef<Phase>('intro')
   const gsRef = useRef<GameState>(newGame(1))
   const starsRef = useRef(makeStars(makeRng(11), 90))
   const keysRef = useRef({ left: false, right: false, fire: false, overcharge: false })
   const overchargePrevRef = useRef(false)
+  const reducedMotion = useReducedMotion()
+  const reducedMotionRef = useRef(reducedMotion)
+  reducedMotionRef.current = reducedMotion
 
   useEffect(() => {
     phaseRef.current = phase
   }, [phase])
 
+  // Pausing only ever reads refs and calls state setters, so the
+  // mount-only key handler below can call these safely.
+  function pause() {
+    if (phaseRef.current !== 'playing') return
+    phaseRef.current = 'paused'
+    keysRef.current = { left: false, right: false, fire: false, overcharge: false }
+    audio.setThrusterOn(false)
+    setPhase('paused')
+  }
+
+  function resume() {
+    if (phaseRef.current !== 'paused') return
+    audio.init()
+    phaseRef.current = 'playing'
+    setPhase('playing')
+  }
+
+  usePauseOnHide(pause, phase === 'playing')
+
   useEffect(() => {
     function onDown(e: KeyboardEvent) {
       const key = e.key.toLowerCase()
       const k = keysRef.current
+      if (key === 'escape' || key === 'p') {
+        if (e.repeat) return
+        if (phaseRef.current === 'playing') pause()
+        else if (phaseRef.current === 'paused') resume()
+        e.preventDefault()
+        return
+      }
+      if (phaseRef.current === 'paused') return
       if (key === 'arrowleft' || key === 'a') k.left = true
       else if (key === 'arrowright' || key === 'd') k.right = true
       else if (key === 'z') k.fire = true
@@ -573,7 +608,7 @@ function SolarWard() {
   function draw() {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    const ctx = scaledContext(canvas)
     if (!ctx) return
     const gs = gsRef.current
 
@@ -610,7 +645,10 @@ function SolarWard() {
     drawHud(ctx, gs)
 
     if (gs.overchargeFlashTimer > 0) {
-      const alpha = (gs.overchargeFlashTimer / OVERCHARGE_FLASH_DURATION) * 0.4
+      // A full-screen flash is exactly what "reduce motion" asks to avoid,
+      // so it's kept faint there.
+      const peak = reducedMotionRef.current ? 0.1 : 0.4
+      const alpha = (gs.overchargeFlashTimer / OVERCHARGE_FLASH_DURATION) * peak
       ctx.fillStyle = `rgba(253,224,71,${alpha})`
       ctx.fillRect(0, 0, VIEW_SIZE, VIEW_SIZE)
     }
@@ -653,9 +691,7 @@ function SolarWard() {
 
   function toggleMute() {
     audio.init()
-    const next = !muted
-    audio.setMuted(next)
-    setMuted(next)
+    toggleSiteMute()
   }
 
   return (
@@ -666,6 +702,11 @@ function SolarWard() {
         <button type="button" className="sw2-mute" onClick={toggleMute} aria-label={muted ? 'Unmute sound' : 'Mute sound'}>
           {muted ? '🔇' : '🔊'}
         </button>
+        {phase === 'playing' && (
+          <button type="button" className="sw2-mute sw2-pause" onClick={pause} aria-label="Pause">
+            ⏸
+          </button>
+        )}
 
         {phase === 'intro' && (
           <div className="sw2-overlay">
@@ -678,9 +719,20 @@ function SolarWard() {
               <li><kbd>&larr;</kbd>/<kbd>&rarr;</kbd> orbital thrusters (momentum-based)</li>
               <li><kbd>Z</kbd> fire</li>
               <li><kbd>X</kbd> Overcharge Pulse — clears everything nearby</li>
+              <li><kbd>Esc</kbd> or <kbd>P</kbd> pause</li>
             </ul>
             <button type="button" className="sw2-primary" onClick={start}>
               Launch
+            </button>
+          </div>
+        )}
+
+        {phase === 'paused' && (
+          <div className="sw2-overlay">
+            <h1>Paused</h1>
+            <p className="sw2-tagline">The star can wait. Score: {Math.floor(gsRef.current.score)}</p>
+            <button type="button" className="sw2-primary" onClick={resume}>
+              Resume
             </button>
           </div>
         )}

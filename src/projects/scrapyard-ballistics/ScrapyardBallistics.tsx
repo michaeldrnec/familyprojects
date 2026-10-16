@@ -11,6 +11,7 @@ import type { Blueprint } from './workshop'
 import type { FlightOutcome } from './flight'
 import { wornUids } from './wear'
 import * as audio from './audio'
+import { useMuted } from '../../shared/audio'
 import './ScrapyardBallistics.css'
 
 // The phase machine from SPEC.md section 2:
@@ -28,7 +29,7 @@ export default function ScrapyardBallistics() {
   const [screen, setScreen] = useState<Screen>('hub')
   const [debrief, setDebrief] = useState<Debrief | null>(null)
   const [flight, setFlight] = useState<{ bp: Blueprint; seed: number; worn: Set<number> } | null>(null)
-  const [muted, setMuted] = useState(audio.isMuted())
+  const [muted, toggleSiteMute] = useMuted()
   // Blueprint undo/redo for the workshop and wiring screens (this session only).
   const history = useRef<{ undo: Blueprint[]; redo: Blueprint[] }>({ undo: [], redo: [] })
   const [, setHistoryTick] = useState(0)
@@ -107,9 +108,7 @@ export default function ScrapyardBallistics() {
   }
 
   function toggleMute() {
-    const next = !muted
-    setMuted(next)
-    audio.setMuted(next)
+    toggleSiteMute()
   }
 
   return (

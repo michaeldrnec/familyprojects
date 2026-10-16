@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { colorDistance, mixColor, toCss, type LensCounts } from './colors'
 import { LEVELS } from './levels'
+import ResultCard from '../../shared/ui/ResultCard'
+import WinBanner from '../../shared/ui/WinBanner'
 import './Rainglow.css'
 
 const MATCH_TOLERANCE = 12
@@ -61,10 +63,9 @@ function Rainglow() {
       </p>
 
       {finished ? (
-        <div className="results">
-          <p className="score">🎉 You completed all {LEVELS.length} levels!</p>
+        <ResultCard score={`🎉 You completed all ${LEVELS.length} levels!`}>
           <button type="button" onClick={restart}>Play Again</button>
-        </div>
+        </ResultCard>
       ) : (
         <>
           <p className="progress">
@@ -83,12 +84,9 @@ function Rainglow() {
           </div>
 
           {matched ? (
-            <div className="win">
+            <WinBanner action={{ label: level!.number === LEVELS.length ? 'Finish' : 'Next Level', onClick: nextLevel }}>
               🎉 Matched!
-              <button type="button" onClick={nextLevel}>
-                {level!.number === LEVELS.length ? 'Finish' : 'Next Level'}
-              </button>
-            </div>
+            </WinBanner>
           ) : (
             <>
               <div className="tray">

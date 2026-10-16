@@ -1,6 +1,6 @@
 import type { Alien, Body, BodyKind } from './physics'
 import { simulateTrajectory, velocityFromAngle } from './physics'
-import { makeRng, type Rng } from './rng'
+import { makeRng, type Rng } from '../../shared/rng'
 import type { TierConfig } from './levels'
 
 export interface Level {
@@ -150,7 +150,7 @@ export function generateLevel(tier: TierConfig, seed: number): Level {
  * and the live preview use -- a level only counts as solvable if a shot
  * within the player's actual control range (SEARCH_POWER_MIN..MAX) reaches
  * Earth. */
-function isSolvable(level: Level): boolean {
+export function isSolvable(level: Level): boolean {
   const powerStep = (SEARCH_POWER_MAX - SEARCH_POWER_MIN) / SEARCH_POWER_STEPS
   for (let angle = 0; angle < 360; angle += SEARCH_ANGLE_STEP) {
     for (let p = 0; p <= SEARCH_POWER_STEPS; p++) {

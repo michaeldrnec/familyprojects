@@ -1,10 +1,12 @@
 // Web Audio for Invader Protocol, all synthesized (no audio files). The
-// bassline is the game's clock made audible: onBeat() is called on every
-// grid step and plays the next note of the descending B2 -> A#2 -> A2 -> G#2
+// bassline is the game's clock made audible: onBeat() is called on every grid
+// step and plays the next note of the descending B2 -> A#2 -> A2 -> G#2
 // figure, layering more instruments as the formation thins out.
 //
-// The AudioContext is created lazily via init(), which callers must invoke
-// from a real user-gesture handler -- browsers block autoplay otherwise.
+// The site-wide AudioContext (shared/audio.ts) is first used in init(), which
+// callers must invoke from a real user-gesture handler -- browsers block
+// autoplay otherwise.
+import { createChannel, getAudioContext } from '../../shared/audio'
 import type { WeaponId } from './constants'
 
 const BASS_NOTES = [123.47, 116.54, 110, 103.83] // B2, A#2, A2, G#2
@@ -15,19 +17,19 @@ let music: GainNode | null = null
 let sfx: GainNode | null = null
 let noiseBuffer: AudioBuffer | null = null
 let distortion: WaveShaperNode | null = null
-let muted = false
 let lastNote = BASS_NOTES[0]
 let ufoNodes: { osc: OscillatorNode; lfo: OscillatorNode; gain: GainNode } | null = null
 
 export function init() {
   if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume()
+    getAudioContext() // resumes it if the browser suspended it
     return
   }
-  ctx = new AudioContext()
-  master = ctx.createGain()
-  master.gain.value = muted ? 0 : 0.8
-  master.connect(ctx.destination)
+  const shared = getAudioContext()
+  const out = createChannel(0.8)
+  if (!shared || !out) return
+  ctx = shared
+  master = out
   music = ctx.createGain()
   music.gain.value = 0.9
   music.connect(master)
@@ -51,15 +53,6 @@ export function init() {
   leadGain.gain.value = 0.5
   distortion.connect(leadGain)
   leadGain.connect(music)
-}
-
-export function setMuted(next: boolean) {
-  muted = next
-  if (master && ctx) master.gain.setTargetAtTime(muted ? 0 : 0.8, ctx.currentTime, 0.05)
-}
-
-export function isMuted() {
-  return muted
 }
 
 // --- Building blocks ------------------------------------------------------

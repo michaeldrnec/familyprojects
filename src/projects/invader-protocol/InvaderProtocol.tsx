@@ -4,8 +4,10 @@ import { OVER_LINGER, newGame, stepGame, type GameState } from './game'
 import { createInput, type FrameInput, type TouchHold, type TouchTap } from './input'
 import { makeStars, render } from './render'
 import { loadProgress, recordRun, type Progress } from './progress'
-import { makeRng } from './rng'
+import { makeRng } from '../../shared/rng'
 import * as audio from './audio'
+import { useMuted } from '../../shared/audio'
+import { usePauseOnHide } from '../../shared/usePauseOnHide'
 import './InvaderProtocol.css'
 
 type Phase = 'intro' | 'playing' | 'paused' | 'gameover'
@@ -27,7 +29,7 @@ function InvaderProtocol() {
   const [progress, setProgress] = useState<Progress>(() => loadProgress())
   const [isNewBest, setIsNewBest] = useState(false)
   const [summary, setSummary] = useState<RunSummary | null>(null)
-  const [muted, setMuted] = useState(audio.isMuted())
+  const [muted, toggleSiteMute] = useMuted()
 
   const areaRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -47,6 +49,8 @@ function InvaderProtocol() {
     inputRef.current.reset()
     changePhase('paused')
   }
+
+  usePauseOnHide(pause, phase === 'playing')
 
   function resume() {
     if (phaseRef.current !== 'paused') return
@@ -89,18 +93,8 @@ function InvaderProtocol() {
     const canvas = canvasRef.current
     if (!canvas) return
     const detach = inputRef.current.attach(canvas)
-    function onHide() {
-      pause()
-    }
-    function onVisibility() {
-      if (document.hidden) pause()
-    }
-    window.addEventListener('blur', onHide)
-    document.addEventListener('visibilitychange', onVisibility)
     return () => {
       detach()
-      window.removeEventListener('blur', onHide)
-      document.removeEventListener('visibilitychange', onVisibility)
       audio.stopUfoHum()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,9 +154,7 @@ function InvaderProtocol() {
 
   function toggleMute() {
     audio.init()
-    const next = !muted
-    audio.setMuted(next)
-    setMuted(next)
+    toggleSiteMute()
   }
 
   // On-screen controls feed the same InputController as the keyboard.

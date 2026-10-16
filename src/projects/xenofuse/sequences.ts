@@ -6,7 +6,7 @@
 // two puzzle types -- once the player can read the numbers, the always-
 // visible rule clue is what lets them extrapolate the missing one.
 import { GLYPHS, UNKNOWN_GLYPH } from './glyphs'
-import { shuffle, type Rng } from './rng'
+import { shuffle, type Rng } from '../../shared/rng'
 
 export type SeqRule = 'arithmetic' | 'doubling' | 'alternating'
 

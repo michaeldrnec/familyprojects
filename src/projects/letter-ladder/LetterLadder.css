@@ -1,24 +1,3 @@
-.letter-ladder .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.letter-ladder .banner {
-  display: block;
-  width: 100%;
-  max-width: 720px;
-  height: auto;
-  border-radius: 12px;
-  margin: 0 auto 20px;
-}
-
 .letter-ladder .length-select {
   display: flex;
   gap: 8px;
@@ -121,21 +100,3 @@
   font-style: italic;
 }
 
-.letter-ladder .win {
-  color: var(--good);
-  background: var(--good-bg);
-  padding: 16px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.letter-ladder .win button {
-  padding: 8px 16px;
-  border: 1px solid var(--good);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--good);
-  cursor: pointer;
-}

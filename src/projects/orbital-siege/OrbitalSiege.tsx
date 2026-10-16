@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useMuted } from '../../shared/audio'
 import * as audio from './audio'
 import { dateKey, generateDaily, prettyDate } from './daily'
 import Debrief from './Debrief'
@@ -45,11 +46,8 @@ type Screen =
 const UNDO_LIMIT = 80
 
 export default function OrbitalSiege() {
-  const [save, setSave] = useState<SaveData>(() => {
-    const s = loadSave()
-    audio.setMuted(s.muted)
-    return s
-  })
+  const [save, setSave] = useState<SaveData>(loadSave)
+  const [muted, toggleMute] = useMuted()
   const [screen, setScreen] = useState<Screen>({ kind: 'map' })
   const [today, setToday] = useState(() => dateKey())
   // Plan undo/redo for the current mission (this session only).
@@ -154,16 +152,8 @@ export default function OrbitalSiege() {
 
   function resetSave() {
     clearSave()
-    const fresh = freshSave()
-    fresh.muted = save.muted
-    commit(fresh)
+    commit(freshSave())
     setScreen({ kind: 'map' })
-  }
-
-  function toggleMute() {
-    const muted = !save.muted
-    audio.setMuted(muted)
-    commit({ ...save, muted })
   }
 
   let body
@@ -244,8 +234,8 @@ export default function OrbitalSiege() {
 
   return (
     <div className="orbital-siege fullscreen">
-      <button className="os-mute" onClick={toggleMute} aria-label={save.muted ? 'Unmute' : 'Mute'}>
-        {save.muted ? '🔇' : '🔊'}
+      <button className="os-mute" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
+        {muted ? '🔇' : '🔊'}
       </button>
       {body}
     </div>

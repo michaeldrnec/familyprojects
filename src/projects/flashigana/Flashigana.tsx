@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { HIRAGANA, type Kana } from './hiragana'
 import { WORDS, type JapaneseWord } from './words'
+import GameBanner from '../../shared/ui/GameBanner'
+import ResultCard from '../../shared/ui/ResultCard'
 import './Flashigana.css'
 
 const REVIEW_ADVANCE_DELAY_MS = 3000
@@ -248,12 +250,7 @@ function Flashigana() {
   if (!round) {
     return (
       <div className="flashigana">
-        <h1 className="sr-only">Flashigana</h1>
-        <img
-          src="/flashigana_logo.png"
-          alt="Flashigana — Hiragana Flashcard Game"
-          className="banner"
-        />
+        <GameBanner title="Flashigana" src="/flashigana_logo.webp" alt="Flashigana — Hiragana Flashcard Game" maxWidth={720} />
         <p>Choose a mode and round length to begin.</p>
 
         <div className="setup">
@@ -310,12 +307,7 @@ function Flashigana() {
 
   return (
     <div className="flashigana">
-      <h1 className="sr-only">Flashigana</h1>
-      <img
-        src="/flashigana_logo.png"
-        alt="Flashigana — Hiragana Flashcard Game"
-        className="banner"
-      />
+      <GameBanner title="Flashigana" src="/flashigana_logo.webp" alt="Flashigana — Hiragana Flashcard Game" maxWidth={720} />
       <p>
         {round.mode === 'quiz' && 'Pick the correct romaji reading for each hiragana character.'}
         {round.mode === 'review' && 'Review mode — study each character and its reading.'}
@@ -323,22 +315,23 @@ function Flashigana() {
       </p>
 
       {finished ? (
-        <div className="results">
-          {round.mode !== 'review' ? (
+        <ResultCard
+          score={
+            round.mode !== 'review'
+              ? `${correctCount} / ${total} correct (${Math.round((correctCount / total) * 100)}%)`
+              : 'Review complete!'
+          }
+        >
+          {round.mode !== 'review' && (
             <>
-              <p className="score">
-                {correctCount} / {total} correct ({Math.round((correctCount / total) * 100)}%)
-              </p>
               <p className="stat-line">Best streak: {bestStreak} in a row</p>
               <p className="reward">
                 Rank: <span>{rewardTier(Math.round((correctCount / total) * 100))}</span>
               </p>
             </>
-          ) : (
-            <p className="score">Review complete!</p>
           )}
           <button type="button" onClick={restart}>Play Again</button>
-        </div>
+        </ResultCard>
       ) : (
         <>
           <p className="progress">

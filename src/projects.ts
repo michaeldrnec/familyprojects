@@ -1,4 +1,43 @@
-export type Category = 'Words & Learning' | 'Puzzles' | 'Space Arcade' | 'Physics Mayhem'
+// The one list of every game on the site. The homepage grid, the routes,
+// the full-viewport layout and the header all read from here, so adding a
+// game means adding one entry (see the new-game checklist in CLAUDE.md).
+// Newest last: the last entry is the homepage's featured card.
+import { lazy, type ComponentType, type LazyExoticComponent } from 'react'
+
+const RELOAD_FLAG = 'familyprojects:chunk-reload'
+
+// lazy() that recovers from a stale deploy: a tab opened before a new
+// version went live asks for game code that no longer exists, so the
+// import fails. Reloading once picks up the new version; the flag stops a
+// genuinely broken chunk (or being offline) from reloading forever.
+function lazyGame(load: () => Promise<{ default: ComponentType }>): LazyExoticComponent<ComponentType> {
+  return lazy(() =>
+    load().then(
+      (mod) => {
+        try {
+          sessionStorage.removeItem(RELOAD_FLAG)
+        } catch {
+          // storage unavailable
+        }
+        return mod
+      },
+      (err: unknown) => {
+        let reloaded = true
+        try {
+          reloaded = sessionStorage.getItem(RELOAD_FLAG) === '1'
+          if (!reloaded) sessionStorage.setItem(RELOAD_FLAG, '1')
+        } catch {
+          // storage unavailable -- don't risk a reload loop
+        }
+        if (!reloaded && navigator.onLine) window.location.reload()
+        throw err
+      },
+    ),
+  )
+}
+
+export const CATEGORIES = ['Words & Learning', 'Puzzles', 'Space Arcade', 'Physics Mayhem'] as const
+export type Category = (typeof CATEGORIES)[number]
 
 export interface Project {
   slug: string
@@ -7,6 +46,13 @@ export interface Project {
   category: Category
   icon: string // a single emoji/glyph used as the project's badge
   accent: string // the project's signature color, used for glows and tints
+  // Loaded on demand, so the homepage doesn't download every game.
+  component: LazyExoticComponent<ComponentType>
+  // Fills the viewport below the header instead of the centered, scrolling
+  // article column (canvas games).
+  fullscreen?: boolean
+  // A logo shown next to the site logo in the header while playing.
+  headerLogo?: { src: string; alt: string }
 }
 
 export const projects: Project[] = [
@@ -17,6 +63,7 @@ export const projects: Project[] = [
     category: 'Words & Learning',
     icon: '🪜',
     accent: '#4ade80',
+    component: lazyGame(() => import('./projects/letter-ladder/LetterLadder')),
   },
   {
     slug: 'trigaword',
@@ -25,6 +72,7 @@ export const projects: Project[] = [
     category: 'Words & Learning',
     icon: '🔺',
     accent: '#facc15',
+    component: lazyGame(() => import('./projects/trigaword/Trigaword')),
   },
   {
     slug: 'sentence-spin',
@@ -33,6 +81,7 @@ export const projects: Project[] = [
     category: 'Words & Learning',
     icon: '🎡',
     accent: '#f472b6',
+    component: lazyGame(() => import('./projects/sentence-spin/SentenceSpin')),
   },
   {
     slug: 'flashigana',
@@ -41,6 +90,7 @@ export const projects: Project[] = [
     category: 'Words & Learning',
     icon: 'あ',
     accent: '#f87171',
+    component: lazyGame(() => import('./projects/flashigana/Flashigana')),
   },
   {
     slug: 'rainglow',
@@ -49,6 +99,7 @@ export const projects: Project[] = [
     category: 'Puzzles',
     icon: '🌈',
     accent: '#a78bfa',
+    component: lazyGame(() => import('./projects/rainglow/Rainglow')),
   },
   {
     slug: 'lexicon',
@@ -57,6 +108,7 @@ export const projects: Project[] = [
     category: 'Words & Learning',
     icon: '🧠',
     accent: '#60a5fa',
+    component: lazyGame(() => import('./projects/lexicon/LexiCon')),
   },
   {
     slug: 'gravity-well',
@@ -65,6 +117,9 @@ export const projects: Project[] = [
     category: 'Space Arcade',
     icon: '🚀',
     accent: '#38bdf8',
+    component: lazyGame(() => import('./projects/gravity-well/GravityWell')),
+    fullscreen: true,
+    headerLogo: { src: '/gravity_well_header.webp', alt: 'Gravity Well' },
   },
   {
     slug: 'xenofuse',
@@ -73,6 +128,7 @@ export const projects: Project[] = [
     category: 'Puzzles',
     icon: '👽',
     accent: '#34d399',
+    component: lazyGame(() => import('./projects/xenofuse/Xenofuse')),
   },
   {
     slug: 'starwarden',
@@ -81,6 +137,9 @@ export const projects: Project[] = [
     category: 'Space Arcade',
     icon: '🛸',
     accent: '#a3e635',
+    component: lazyGame(() => import('./projects/starwarden/Starwarden')),
+    fullscreen: true,
+    headerLogo: { src: '/StarwardenHeader.svg', alt: 'Starwarden' },
   },
   {
     slug: 'solar-ward',
@@ -89,6 +148,8 @@ export const projects: Project[] = [
     category: 'Space Arcade',
     icon: '☀️',
     accent: '#fb923c',
+    component: lazyGame(() => import('./projects/solar-ward/SolarWard')),
+    fullscreen: true,
   },
   {
     slug: 'ion-perimeter',
@@ -97,6 +158,8 @@ export const projects: Project[] = [
     category: 'Space Arcade',
     icon: '🛰️',
     accent: '#67e8f9',
+    component: lazyGame(() => import('./projects/ion-perimeter/IonPerimeter')),
+    fullscreen: true,
   },
   {
     slug: 'scrapyard-ballistics',
@@ -105,6 +168,8 @@ export const projects: Project[] = [
     category: 'Physics Mayhem',
     icon: '🔧',
     accent: '#f59e0b',
+    component: lazyGame(() => import('./projects/scrapyard-ballistics/ScrapyardBallistics')),
+    fullscreen: true,
   },
   {
     slug: 'feline-ballistics',
@@ -113,6 +178,8 @@ export const projects: Project[] = [
     category: 'Physics Mayhem',
     icon: '🐈',
     accent: '#fb7185',
+    component: lazyGame(() => import('./projects/feline-ballistics/FelineBallistics')),
+    fullscreen: true,
   },
   {
     slug: 'lux-tenebris',
@@ -121,6 +188,8 @@ export const projects: Project[] = [
     category: 'Puzzles',
     icon: '🔦',
     accent: '#fcd34d',
+    component: lazyGame(() => import('./projects/lux-tenebris/LuxTenebris')),
+    fullscreen: true,
   },
   {
     slug: 'invader-protocol',
@@ -129,6 +198,8 @@ export const projects: Project[] = [
     category: 'Space Arcade',
     icon: '👾',
     accent: '#e879f9',
+    component: lazyGame(() => import('./projects/invader-protocol/InvaderProtocol')),
+    fullscreen: true,
   },
   {
     slug: 'orbital-siege',
@@ -137,5 +208,11 @@ export const projects: Project[] = [
     category: 'Puzzles',
     icon: '🪐',
     accent: '#818cf8',
+    component: lazyGame(() => import('./projects/orbital-siege/OrbitalSiege')),
+    fullscreen: true,
   },
 ]
+
+export function projectBySlug(slug: string): Project | undefined {
+  return projects.find((p) => p.slug === slug)
+}

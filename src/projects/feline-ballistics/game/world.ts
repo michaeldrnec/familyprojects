@@ -21,7 +21,7 @@ import {
   catMass,
   type Cat,
 } from './cat'
-import { makeRng, type Rng } from '../rng'
+import { makeRng, type Rng } from '../../../shared/rng'
 import { floorY, type LevelDef, type Shot, type ShotAction } from '../levels/types'
 
 export const SUBSTEP = 1 / 180 // s

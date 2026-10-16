@@ -1,6 +1,7 @@
-// Saved progress (localStorage), following ion-perimeter/progress.ts: the
-// chosen difficulty plus best stars per level, kept separately for each
-// difficulty. Tolerant of storage being unavailable.
+// Saved progress: the chosen difficulty plus best stars per level, kept
+// separately for each difficulty. Stored through the site's shared storage
+// helper (per player profile, versioned, never throws).
+import { createStore } from '../../shared/storage'
 import { LEVELS } from './levels'
 
 export type DifficultyId = 'lantern' | 'torch' | 'ember'
@@ -21,8 +22,6 @@ export const DIFFICULTIES: Difficulty[] = [
   { id: 'ember', name: 'Ember', blurb: 'True darkness. Less air. Memory only.', timeScale: 0.85, memorySeconds: 0 },
 ]
 
-const STORAGE_KEY = 'lux-tenebris:progress'
-
 export interface Progress {
   difficulty: DifficultyId
   stars: Record<DifficultyId, number[]> // best stars per level index, 0 = not cleared
@@ -33,30 +32,31 @@ function empty(): Progress {
   return { difficulty: 'torch', stars: { lantern: zeros(), torch: zeros(), ember: zeros() } }
 }
 
-export function loadProgress(): Progress {
-  const base = empty()
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return base
-    const parsed = JSON.parse(raw)
+const store = createStore<Progress>({
+  key: 'lux-tenebris:progress',
+  version: 1,
+  defaults: empty,
+  parse(parsed) {
+    const base = empty()
     if (DIFFICULTIES.some((d) => d.id === parsed.difficulty)) base.difficulty = parsed.difficulty
     for (const d of DIFFICULTIES) {
       const saved = parsed.stars?.[d.id]
       if (Array.isArray(saved)) base.stars[d.id] = base.stars[d.id].map((_, i) => (typeof saved[i] === 'number' ? saved[i] : 0))
     }
     return base
-  } catch {
-    return base
-  }
-}
+  },
+  summary: {
+    slug: 'lux-tenebris',
+    describe(p) {
+      // Furthest progress on any difficulty.
+      const cleared = Math.max(...DIFFICULTIES.map((d) => p.stars[d.id].filter((n) => n > 0).length))
+      return cleared > 0 ? `${cleared}/${LEVELS.length} caverns` : null
+    },
+  },
+})
 
-export function saveProgress(p: Progress) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(p))
-  } catch {
-    // storage unavailable -- progress just won't persist
-  }
-}
+export const loadProgress = store.load
+export const saveProgress = store.save
 
 export function isUnlocked(p: Progress, levelIndex: number): boolean {
   return levelIndex === 0 || p.stars[p.difficulty][levelIndex - 1] > 0

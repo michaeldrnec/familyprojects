@@ -2,7 +2,7 @@
 // seeded Rng and then just aged forward -- cheap to step every frame since
 // nothing is re-simulated, only `age` advances. Modeled directly on
 // starwarden/explosions.ts.
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export interface ExplosionParticle {
   angle: number

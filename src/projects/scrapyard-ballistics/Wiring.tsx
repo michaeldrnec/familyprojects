@@ -17,7 +17,7 @@ import {
 } from './wiring'
 import type { SaveData } from './progress'
 import { drawBlueprint, hitTest, layoutBlueprint, wireColor } from './render/blueprint'
-import { pointerPos, useCanvasLoop } from './useCanvas'
+import { pointerPos, useCanvasLoop } from '../../shared/useCanvasLoop'
 import { formatAlt } from './format'
 import * as audio from './audio'
 

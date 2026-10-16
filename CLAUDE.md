@@ -29,3 +29,37 @@ the change:
 is implemented.
 
 If a change doesn't clearly fit one of these, ask the user before bumping.
+
+## Checks before reporting a change
+
+Run `npm run lint`, `npm test` and `npm run build`; for anything that touches a page's layout,
+rendering or startup, also run `npm run test:e2e` (it opens every page on a desktop and a phone
+profile). CI runs all of these on every push.
+
+## New game checklist
+
+Every new game (and every major rework of one) should tick all of these:
+
+1. **Register it once** in `src/projects.ts`: slug, title, description, category, icon, accent,
+   `component: lazyGame(() => import(...))`, plus `fullscreen: true` for canvas games that should
+   fill the viewport, and `headerLogo` if it has one. Nothing else needs editing to add a route;
+   the homepage, routes, layout and smoke tests read from that list. Newest goes last (it becomes
+   the homepage's featured card).
+2. **Use `src/shared/` instead of copying code**: `rng.ts` (seeded RNG), `useCanvasLoop.ts`
+   (fill-the-parent canvas) or `hiDpiCanvas.ts` (fixed logical-size canvas), `audio.ts`
+   (`getAudioContext()` + `createChannel()` for sound, `useMuted()` for the mute button),
+   `storage.ts` (`createStore()` for saves), `usePauseOnHide.ts`, `motion.ts`,
+   `familySafe.ts`, and `shared/ui/` (banner, win banner, results card, confetti).
+3. **Phones and tablets**: playable by touch, not only keyboard; check it at phone width.
+4. **Sharp canvas**: use `useCanvasLoop` or `useHiDpiCanvas` + `scaledContext`, never a bare
+   fixed-size canvas stretched by CSS.
+5. **Pause when hidden**: real-time games pause (with a visible pause screen) when the player
+   leaves, via `usePauseOnHide`, and offer a pause button and key.
+6. **Saves and bests** go through `createStore()` (per profile, versioned), with a `summary` so
+   the homepage tile shows progress.
+7. **Family-safe**: any word list goes through `isFamilySafe`; no gore or adult content.
+8. **Reduced motion**: skip or soften screen shake and full-screen flashes when
+   `prefersReducedMotion()` / `useReducedMotion()` is true.
+9. **Tests**: put unit tests next to the logic (`*.test.ts`), especially level solvability.
+10. **Docs**: add it to the README's game list, and keep the `Status:` line in its `SPEC.md`
+    current.

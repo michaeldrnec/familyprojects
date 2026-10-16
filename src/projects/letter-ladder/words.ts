@@ -8,6 +8,8 @@
 // (profanity and slurs, cross-checked against a public bad-words list) was
 // removed since this is a family-oriented app and puzzles are randomly
 // generated -- players don't choose which word appears.
+import { isFamilySafe } from '../../shared/familySafe'
+
 export const WORDS_3: string[] = [
   'AAH', 'AAL', 'AAS', 'ABA', 'ABO', 'ABS', 'ABY', 'ACE', 'ACT', 'ADD', 'ADO', 'ADS',
   'ADZ', 'AFF', 'AFT', 'AGA', 'AGE', 'AGO', 'AHA', 'AID', 'AIL', 'AIM', 'AIN', 'AIR',
@@ -1139,16 +1141,18 @@ export const WORDS_5: string[] = [
 
 export type WordLength = 3 | 4 | 5
 
+// The shared family-safe filter runs on top of the list's own denylist, so
+// blocked words are never picked for a puzzle nor accepted as a step.
 const WORD_LISTS: Record<WordLength, string[]> = {
-  3: WORDS_3,
-  4: WORDS_4,
-  5: WORDS_5,
+  3: WORDS_3.filter(isFamilySafe),
+  4: WORDS_4.filter(isFamilySafe),
+  5: WORDS_5.filter(isFamilySafe),
 }
 
 const WORD_SETS: Record<WordLength, Set<string>> = {
-  3: new Set(WORDS_3.map((w) => w.toUpperCase())),
-  4: new Set(WORDS_4.map((w) => w.toUpperCase())),
-  5: new Set(WORDS_5.map((w) => w.toUpperCase())),
+  3: new Set(WORD_LISTS[3].map((w) => w.toUpperCase())),
+  4: new Set(WORD_LISTS[4].map((w) => w.toUpperCase())),
+  5: new Set(WORD_LISTS[5].map((w) => w.toUpperCase())),
 }
 
 export function wordsForLength(length: WordLength): string[] {

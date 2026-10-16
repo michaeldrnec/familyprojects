@@ -1,24 +1,3 @@
-.sentence-spin .sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.sentence-spin .banner {
-  display: block;
-  width: 100%;
-  max-width: 480px;
-  height: auto;
-  border-radius: 12px;
-  margin: 0 auto 12px;
-}
-
 .sentence-spin .board {
   display: flex;
   align-items: flex-start;
@@ -183,26 +162,6 @@
   background: var(--accent-bg);
   color: var(--accent);
   border-color: var(--accent);
-}
-
-.sentence-spin .win {
-  color: var(--good);
-  background: var(--good-bg);
-  padding: 16px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin: 16px 0;
-}
-
-.sentence-spin .win button {
-  padding: 8px 16px;
-  border: 1px solid var(--good);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--good);
-  cursor: pointer;
 }
 
 .sentence-spin .wheel-area {

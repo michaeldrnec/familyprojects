@@ -1,38 +1,26 @@
 // Synthesized SFX via the Web Audio API only -- no audio files, following
-// scrapyard-ballistics/audio.ts: a lazy AudioContext created from a real
-// user gesture (init()) and a master gain node for mute.
+// scrapyard-ballistics/audio.ts: the shared site AudioContext, first used
+// from a real user gesture (init()), and this game's own output channel.
+import { createChannel, getAudioContext } from '../../shared/audio'
 import type { EventKind } from './sim'
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
-let muted = false
 let noise: AudioBuffer | null = null
 
 export function init() {
   if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume()
+    getAudioContext() // resumes it if the browser suspended it
     return
   }
-  try {
-    ctx = new AudioContext()
-  } catch {
-    return
-  }
-  masterGain = ctx.createGain()
-  masterGain.gain.value = muted ? 0 : 0.6
-  masterGain.connect(ctx.destination)
+  const shared = getAudioContext()
+  const out = createChannel(0.6)
+  if (!shared || !out) return
+  ctx = shared
+  masterGain = out
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate)
   const data = noise.getChannelData(0)
   for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1
-}
-
-export function setMuted(next: boolean) {
-  muted = next
-  if (masterGain && ctx) masterGain.gain.setTargetAtTime(muted ? 0 : 0.6, ctx.currentTime, 0.05)
-}
-
-export function isMuted() {
-  return muted
 }
 
 function tone(freq: number, type: OscillatorType, peak: number, attack: number, release: number, sweepTo?: number, delay = 0) {

@@ -1,34 +1,26 @@
 // Synthesized SFX via the Web Audio API only, following
-// scrapyard-ballistics/audio.ts: a lazy singleton AudioContext created from
-// a real user gesture (init()), a masterGain for mute, and small tone /
+// scrapyard-ballistics/audio.ts: the shared site AudioContext, first used from
+// a real user gesture (init()), its own output channel, and small tone /
 // noise helpers. handleEvent() maps GameWorld events to cues.
+import { createChannel, getAudioContext } from '../../shared/audio'
 import type { GameEvent } from './game/world'
 import type { BreedId } from './game/breeds'
 import type { SoundKind } from './game/materials'
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
-let muted = false
 let noiseCache: AudioBuffer | null = null
 
 export function init() {
   if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume()
+    getAudioContext() // resumes it if the browser suspended it
     return
   }
-  ctx = new AudioContext()
-  masterGain = ctx.createGain()
-  masterGain.gain.value = muted ? 0 : 0.7
-  masterGain.connect(ctx.destination)
-}
-
-export function setMuted(next: boolean) {
-  muted = next
-  if (masterGain && ctx) masterGain.gain.setTargetAtTime(muted ? 0 : 0.7, ctx.currentTime, 0.05)
-}
-
-export function isMuted() {
-  return muted
+  const shared = getAudioContext()
+  const out = createChannel(0.7)
+  if (!shared || !out) return
+  ctx = shared
+  masterGain = out
 }
 
 function noise(): AudioBuffer | null {

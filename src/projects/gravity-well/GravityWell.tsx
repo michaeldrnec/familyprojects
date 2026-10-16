@@ -19,6 +19,8 @@ import { TIERS } from './levels'
 import { generateSolvableLevel, type Level } from './levelGen'
 import { scoreLanding, type LevelScore } from './scoring'
 import * as audio from './audio'
+import { logicalPoint, scaledContext, useHiDpiCanvas } from '../../shared/hiDpiCanvas'
+import { useMuted } from '../../shared/audio'
 import './GravityWell.css'
 
 // Playback runs faster than real-time (a full simulated flight can be many
@@ -345,12 +347,13 @@ function GravityWell() {
   // progress row above it can match that width and right-align flush with
   // the canvas's real right edge instead of the far edge of the page.
   const [canvasWidth, setCanvasWidth] = useState<number | null>(null)
-  const [muted, setMuted] = useState(false)
+  const [muted, toggleSiteMute] = useMuted()
 
   const totalScore = levelScores.reduce((sum, s) => sum + (s?.total ?? 0), 0)
   const finished = levelIndex >= TIERS.length
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  useHiDpiCanvas(canvasRef, level?.bounds.width ?? 0, level?.bounds.height ?? 0, { capToLogical: true })
   const rocketRef = useRef<RocketState>({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } })
   const trailRef = useRef<Vec2[]>([])
   const rafRef = useRef<number | null>(null)
@@ -416,7 +419,7 @@ function GravityWell() {
   function draw() {
     const canvas = canvasRef.current
     if (!canvas || !level) return
-    const ctx = canvas.getContext('2d')
+    const ctx = scaledContext(canvas)
     if (!ctx) return
     const t = clockRef.current
 
@@ -624,12 +627,8 @@ function GravityWell() {
 
   function canvasPoint(e: { clientX: number; clientY: number }): Vec2 {
     const canvas = canvasRef.current
-    if (!canvas) return { x: 0, y: 0 }
-    const rect = canvas.getBoundingClientRect()
-    return {
-      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
-    }
+    if (!canvas || !level) return { x: 0, y: 0 }
+    return logicalPoint(e, canvas, level.bounds.width, level.bounds.height)
   }
 
   function updateDrag(point: Vec2) {
@@ -772,9 +771,7 @@ function GravityWell() {
 
   function toggleMute() {
     audio.init()
-    const next = !muted
-    audio.setMuted(next)
-    setMuted(next)
+    toggleSiteMute()
   }
 
   return (

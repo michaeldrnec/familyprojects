@@ -4,7 +4,8 @@ import type { Blueprint } from './workshop'
 import { BUTTONS, BUTTON_LABEL, type ButtonId } from './wiring'
 import { FAILURE_LABEL } from './failures'
 import { drawFlight, drawMap } from './render/telemetry'
-import { useCanvasLoop } from './useCanvas'
+import { useCanvasLoop } from '../../shared/useCanvasLoop'
+import { usePauseOnHide } from '../../shared/usePauseOnHide'
 import { formatAlt, formatSpeed, formatTime } from './format'
 import { ATMOSPHERE_TOP } from './atmosphere'
 import { coachTip } from './hints'
@@ -46,6 +47,17 @@ export default function Flight({ blueprint, seed, worn, coach, ghost, bestAltitu
   const hudClock = useRef(0)
   const [coachOn, setCoachOn] = useState(coach)
   const tipRef = useRef<{ text: string; at: number } | null>(null)
+  // The flight freezes while paused -- including automatically when the
+  // player leaves mid-flight, so nothing burns up or crashes without them.
+  const [paused, setPaused] = useState(false)
+  const pausedRef = useRef(false)
+  pausedRef.current = paused
+
+  function pause() {
+    steerKeys.current = { left: false, right: false }
+    steerButtons.current = { left: false, right: false }
+    setPaused(true)
+  }
 
   const canvasRef = useCanvasLoop((ctx, w, h, dt, time) => {
     const s = steerKeys.current
@@ -53,7 +65,7 @@ export default function Flight({ blueprint, seed, worn, coach, ghost, bestAltitu
     const left = s.left || b.left
     const right = s.right || b.right
     sim.controls.steer = left === right ? 0 : left ? -1 : 1
-    sim.advance(dt)
+    if (!pausedRef.current) sim.advance(dt)
 
     for (const cue of sim.drainCues()) audio.playCue(cue)
     let thrust = 0
@@ -67,7 +79,7 @@ export default function Flight({ blueprint, seed, worn, coach, ghost, bestAltitu
         grit = Math.max(grit, GRIT[p.def.engine.sound] ?? 0.5)
       }
     }
-    if (sim.ended) audio.stopEngine()
+    if (sim.ended || pausedRef.current) audio.stopEngine()
     else audio.setEngine(max > 0 ? thrust / max : 0, grit)
 
     if (map) {
@@ -87,9 +99,17 @@ export default function Flight({ blueprint, seed, worn, coach, ghost, bestAltitu
 
   useEffect(() => () => audio.stopEngine(), [])
 
+  usePauseOnHide(pause, sim.status !== 'pad' && !sim.ended && !paused)
+
   useEffect(() => {
     function onKey(e: KeyboardEvent, down: boolean) {
       const k = e.key.toLowerCase()
+      if (down && (k === 'p' || e.key === 'Escape') && !sim.ended && sim.status !== 'pad') {
+        if (pausedRef.current) setPaused(false)
+        else pause()
+        return
+      }
+      if (pausedRef.current) return
       if (k === 'a' || e.key === 'ArrowLeft') steerKeys.current.left = down
       else if (k === 'd' || e.key === 'ArrowRight') steerKeys.current.right = down
       if (!down) return
@@ -208,6 +228,18 @@ export default function Flight({ blueprint, seed, worn, coach, ghost, bestAltitu
             <button className="sb-x" onClick={() => setCoachOn(false)} aria-label="Turn tips off" title="Turn tips off">
               ✕
             </button>
+          </div>
+        )}
+
+        {paused && !outcome && (
+          <div className="sb-overlay">
+            <div className="sb-card sb-over-card">
+              <h2>Paused</h2>
+              <p>The flight is frozen until you come back.</p>
+              <button className="sb-btn sb-btn-primary" onClick={() => setPaused(false)}>
+                Resume
+              </button>
+            </div>
           </div>
         )}
 

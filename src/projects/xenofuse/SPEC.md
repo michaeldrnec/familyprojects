@@ -2,7 +2,8 @@
 
 > Defuse a captured alien bomb by cracking its code before the timer hits zero.
 
-Status: **draft spec — not yet built**. This document describes the design; no game code exists yet.
+Status: **built.** Playable at `/xenofuse`. This is the original design document; where it left questions open
+(section 12), the build's answers are the tunable constants at the top of `Xenofuse.tsx`.
 
 ## 1. Pitch
 

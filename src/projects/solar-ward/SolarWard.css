@@ -107,3 +107,7 @@
   line-height: 1;
   cursor: pointer;
 }
+
+.solar-ward .sw2-pause {
+  right: 50px;
+}

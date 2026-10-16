@@ -2,7 +2,7 @@
 // spawned both as standalone drifting pickups and as chance-based drops
 // from destroyed enemies.
 import { VIEW_HEIGHT, Y_MARGIN } from './physics'
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export type PowerupType = 'fuel' | 'crystal'
 

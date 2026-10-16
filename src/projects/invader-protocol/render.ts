@@ -31,7 +31,7 @@ import { markerFiring } from './ufo'
 import { DAMAGE_LIFE, FLASH_LIFE, FLOATER_LIFE } from './effects'
 import { tierFor } from './audio'
 import { heatColor, type GameState } from './game'
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export interface Star {
   x: number

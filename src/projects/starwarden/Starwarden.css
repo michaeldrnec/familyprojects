@@ -106,6 +106,10 @@
   cursor: pointer;
 }
 
+.starwarden .sw-pause {
+  right: 50px;
+}
+
 .starwarden .sw-touch-hint {
   display: none;
   color: var(--text-h);

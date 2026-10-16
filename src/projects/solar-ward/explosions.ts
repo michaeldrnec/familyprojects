@@ -3,7 +3,7 @@
 // every frame since nothing is re-simulated, only `age` advances. Same
 // approach as starwarden/explosions.ts, adapted to plain x/y since this
 // arena has no wraparound world to track positions against.
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export interface ExplosionParticle {
   angle: number

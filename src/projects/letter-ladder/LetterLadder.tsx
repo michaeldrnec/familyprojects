@@ -9,6 +9,8 @@ import {
   type Puzzle,
   type WordLength,
 } from './words'
+import GameBanner from '../../shared/ui/GameBanner'
+import WinBanner from '../../shared/ui/WinBanner'
 import './LetterLadder.css'
 
 const WORD_LENGTHS: WordLength[] = [3, 4, 5]
@@ -100,11 +102,11 @@ function LetterLadder() {
 
   return (
     <div className="letter-ladder">
-      <h1 className="sr-only">Letter Ladder</h1>
-      <img
-        src="/letter_ladders_logo.png"
+      <GameBanner
+        title="Letter Ladder"
+        src="/letter_ladders_logo.webp"
         alt="Letter Ladder — the ultimate word-climbing adventure"
-        className="banner"
+        maxWidth={720}
       />
 
       <div className="length-select">
@@ -151,10 +153,9 @@ function LetterLadder() {
       </div>
 
       {solved ? (
-        <div className="win">
+        <WinBanner action={{ label: 'New puzzle', onClick: () => newPuzzle() }}>
           🎉 Solved in {ladder.length - 1} steps!
-          <button type="button" onClick={() => newPuzzle()}>New puzzle</button>
-        </div>
+        </WinBanner>
       ) : (
         <form onSubmit={submitGuess} className="guess-form">
           <input

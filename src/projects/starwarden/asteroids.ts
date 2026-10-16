@@ -3,7 +3,7 @@
 // holding an altitude. Destructible (a few laser hits) for points, but
 // also a straightforward ramming hazard if the player just plows into one.
 import { VIEW_HEIGHT, Y_MARGIN } from './physics'
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export interface Asteroid {
   id: number

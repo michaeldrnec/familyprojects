@@ -4,7 +4,7 @@
 // nodes, rail coils -- so a glance at the map tells you what a pad is and how
 // far it has been invested in, not just its color.
 import { TOWER_DEFS, towerStats, type TowerInstance, type TowerId, type BranchId } from './towers'
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 const TAU = Math.PI * 2
 const HULL = 'rgba(8,12,20,0.94)'

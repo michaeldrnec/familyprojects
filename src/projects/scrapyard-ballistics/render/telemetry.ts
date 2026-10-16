@@ -3,6 +3,7 @@
 // the planet) pointing up the screen; sky fading to black with altitude;
 // clouds and the launch pad for a sense of speed; flickering exhaust;
 // chute canopies; blast rings. Plus the orbit map (minimap or full screen).
+import { prefersReducedMotion } from '../../../shared/motion'
 import type { FlightSim, FlightPart } from '../flight'
 import { PPM } from '../structure'
 import { ATMOSPHERE_TOP, heatFlux } from '../atmosphere'
@@ -52,7 +53,8 @@ export function drawFlight(ctx: CanvasRenderingContext2D, w: number, h: number, 
     extent = Math.max(extent, Math.hypot(p.rp.body.position.x, p.rp.body.position.y) / PPM + 1)
   }
   const scale = Math.max(4, Math.min(48, (Math.min(w, h) * 0.3) / extent)) * o.zoom
-  const shake = Math.min(6, sim.q / 6000 + sim.maxStressRatio * 3) * (sim.status === 'flying' ? 1 : 0)
+  // Max-Q buffeting; skipped when the player has asked for reduced motion.
+  const shake = prefersReducedMotion() ? 0 : Math.min(6, sim.q / 6000 + sim.maxStressRatio * 3) * (sim.status === 'flying' ? 1 : 0)
   const sx = (Math.random() - 0.5) * shake
   const sy = (Math.random() - 0.5) * shake
 

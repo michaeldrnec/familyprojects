@@ -1,7 +1,6 @@
-// Persistent bests across sessions, following ion-perimeter/progress.ts:
-// a narrow localStorage record (best score, longest survival, highest
-// escalation level reached), tolerant of storage being unavailable.
-const STORAGE_KEY = 'starwarden:progress'
+// Persistent bests across sessions (best score, longest survival, highest
+// escalation level reached), saved through the site's shared storage helper.
+import { createStore } from '../../shared/storage'
 
 export interface Progress {
   bestScore: number
@@ -9,19 +8,20 @@ export interface Progress {
   bestLevel: number // displayed level (1-based)
 }
 
-const DEFAULT_PROGRESS: Progress = { bestScore: 0, bestTime: 0, bestLevel: 0 }
+const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
 
-export function loadProgress(): Progress {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_PROGRESS }
-    const parsed = JSON.parse(raw)
-    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
-    return { bestScore: num(parsed.bestScore), bestTime: num(parsed.bestTime), bestLevel: num(parsed.bestLevel) }
-  } catch {
-    return { ...DEFAULT_PROGRESS }
-  }
-}
+const store = createStore<Progress>({
+  key: 'starwarden:progress',
+  version: 1,
+  defaults: () => ({ bestScore: 0, bestTime: 0, bestLevel: 0 }),
+  parse: (p) => ({ bestScore: num(p.bestScore), bestTime: num(p.bestTime), bestLevel: num(p.bestLevel) }),
+  summary: {
+    slug: 'starwarden',
+    describe: (p) => (p.bestScore > 0 ? `Best ${p.bestScore.toLocaleString()}` : null),
+  },
+})
+
+export const loadProgress = store.load
 
 // Returns the updated record and whether the score is a new best.
 export function recordRun(score: number, time: number, level: number): { progress: Progress; isNewBest: boolean } {
@@ -31,11 +31,7 @@ export function recordRun(score: number, time: number, level: number): { progres
     bestTime: Math.max(current.bestTime, time),
     bestLevel: Math.max(current.bestLevel, level),
   }
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next))
-  } catch {
-    // Private browsing / storage disabled -- the run still counted, just not saved.
-  }
+  store.save(next)
   return { progress: next, isNewBest: score > current.bestScore }
 }
 

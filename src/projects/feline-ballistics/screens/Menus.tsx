@@ -26,7 +26,7 @@ function CatPortrait({ breed, size = 72 }: { breed: keyof typeof BREEDS; size?: 
   return <canvas ref={ref} className="fb-portrait" style={{ width: size, height: size }} aria-hidden="true" />
 }
 
-export function Title({ onPlay, settings, onToggleMotion, onToggleMute }: { onPlay: () => void; settings: Progress['settings']; onToggleMotion: () => void; onToggleMute: () => void }) {
+export function Title({ onPlay, settings, muted, onToggleMotion, onToggleMute }: { onPlay: () => void; settings: Progress['settings']; muted: boolean; onToggleMotion: () => void; onToggleMute: () => void }) {
   return (
     <div className="fb-screen fb-title">
       <div className="fb-moon" aria-hidden="true" />
@@ -52,7 +52,7 @@ export function Title({ onPlay, settings, onToggleMotion, onToggleMute }: { onPl
           <input type="checkbox" checked={settings.reducedMotion} onChange={onToggleMotion} /> Reduced motion (no shake or slow-mo)
         </label>
         <label>
-          <input type="checkbox" checked={settings.muted} onChange={onToggleMute} /> Mute
+          <input type="checkbox" checked={muted} onChange={onToggleMute} /> Mute
         </label>
       </div>
       <details className="fb-howto">

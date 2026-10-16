@@ -1,14 +1,14 @@
-// Synthesized sound, following starwarden/audio.ts: a lazily created
-// AudioContext (init() must run from a user gesture), a master gain for
-// mute, oscillators and filtered noise bursts. Sound is part of the puzzle
+// Synthesized sound, following starwarden/audio.ts: the shared site
+// AudioContext (init() must run from a user gesture), this game's own output
+// channel, oscillators and filtered noise bursts. Sound is part of the puzzle
 // here -- footsteps change with terrain, so you can tell plank from water
 // from stone in the dark.
+import { createChannel, getAudioContext } from '../../shared/audio'
 
 let ctx: AudioContext | null = null
 let master: GainNode | null = null
 let humGain: GainNode | null = null
 let humOsc: OscillatorNode | null = null
-let muted = false
 
 function noiseBuffer(c: AudioContext, seconds: number): AudioBuffer {
   const b = c.createBuffer(1, Math.ceil(c.sampleRate * seconds), c.sampleRate)
@@ -19,13 +19,14 @@ function noiseBuffer(c: AudioContext, seconds: number): AudioBuffer {
 
 export function init() {
   if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume()
+    getAudioContext() // resumes it if the browser suspended it
     return
   }
-  ctx = new AudioContext()
-  master = ctx.createGain()
-  master.gain.value = muted ? 0 : 1
-  master.connect(ctx.destination)
+  const shared = getAudioContext()
+  const out = createChannel(1)
+  if (!shared || !out) return
+  ctx = shared
+  master = out
 
   // The flashlight filament: a quiet buzzing tone whose level is set by
   // setHum() -- it grows louder and rougher as the battery dies.
@@ -41,15 +42,6 @@ export function init() {
   filter.connect(humGain)
   humGain.connect(master)
   humOsc.start()
-}
-
-export function isMuted() {
-  return muted
-}
-
-export function setMuted(next: boolean) {
-  muted = next
-  if (ctx && master) master.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.05)
 }
 
 // on: whether the beam is lit at all; batteryFrac: charge left (1 = full).

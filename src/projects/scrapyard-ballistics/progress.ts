@@ -1,12 +1,12 @@
-// Persistent save (SPEC.md section 9), following ion-perimeter/progress.ts:
-// one localStorage key, every read defensive, every write wrapped in
-// try/catch so private browsing still plays fine without persistence.
+// Persistent save (SPEC.md section 9), stored through the site's shared
+// storage helper (per player profile, versioned, never throws). Every read
+// is defensive.
+import { createStore } from '../../shared/storage'
+import { formatAlt } from './format'
 import { PART_DEFS, type ContractId, type PartId } from './parts'
 import { emptyBlueprint, placePart, type Blueprint, type Rot } from './workshop'
 import { autoWire } from './wiring'
 import { isJob, refillJobs, type Job } from './jobs'
-
-const STORAGE_KEY = 'scrapyard-ballistics:save'
 
 export interface SaveData {
   cash: number
@@ -122,11 +122,11 @@ function isPartId(id: string): id is PartId {
   return id in PART_DEFS
 }
 
-export function loadSave(): SaveData {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return freshSave()
-    const parsed = JSON.parse(raw)
+const store = createStore<SaveData>({
+  key: 'scrapyard-ballistics:save',
+  version: 1,
+  defaults: freshSave,
+  parse(parsed) {
     const base = freshSave()
     const inventory = parseCounts(parsed.inventory)
     const worn = parseCounts(parsed.worn)
@@ -156,26 +156,16 @@ export function loadSave(): SaveData {
       jobs: refillJobs(jobs, bestAltitude, blueprint, flights + 7),
       bestTrack: Array.isArray(parsed.bestTrack) ? parsed.bestTrack.filter((p: unknown) => Array.isArray(p) && p.length === 3) : [],
     }
-  } catch {
-    return freshSave()
-  }
-}
+  },
+  summary: {
+    slug: 'scrapyard-ballistics',
+    describe: (save) => (save.bestAltitude > 0 ? `Best ${formatAlt(save.bestAltitude)}` : null),
+  },
+})
 
-export function writeSave(save: SaveData) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(save))
-  } catch {
-    // Storage disabled -- the session still plays, it just won't persist.
-  }
-}
-
-export function clearSave() {
-  try {
-    window.localStorage.removeItem(STORAGE_KEY)
-  } catch {
-    // ignore
-  }
-}
+export const loadSave = store.load
+export const writeSave = store.save
+export const clearSave = store.clear
 
 // Returns the parts the scrap pile handed out (for the debrief callout).
 export function topUpMinimumKit(inventory: Partial<Record<PartId, number>>): Partial<Record<PartId, number>> {

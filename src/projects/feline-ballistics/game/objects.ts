@@ -3,7 +3,7 @@
 // the shard slicing used when something breaks.
 import Matter from 'matter-js'
 import { MATERIALS, type MaterialId } from './materials'
-import type { Rng } from '../rng'
+import type { Rng } from '../../../shared/rng'
 
 export type PrefabId =
   // kitchen

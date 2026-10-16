@@ -1,0 +1,272 @@
+/* Site chrome shared across pages: loading screen, 404, profile menu. */
+
+.site-button {
+  display: inline-block;
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--accent);
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.site-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* --- Loading ------------------------------------------------------------ */
+
+.site-loading {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  min-height: 240px;
+  color: var(--text);
+  /* Fast loads finish before this fades in, so they never flash a spinner. */
+  opacity: 0;
+  animation: site-fade-in 0.2s 0.3s forwards;
+}
+
+.site-spinner {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  animation: site-spin 0.8s linear infinite;
+}
+
+@keyframes site-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes site-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+/* With reduced motion the site-wide rule stops the spinner; keep the text. */
+@media (prefers-reduced-motion: reduce) {
+  .site-loading {
+    opacity: 1;
+  }
+}
+
+/* --- 404 ------------------------------------------------------------------ */
+
+.site-message {
+  max-width: 480px;
+  margin: 48px auto;
+  text-align: center;
+}
+
+.site-message-icon {
+  font-size: 64px;
+  margin: 0;
+}
+
+.site-message h1 {
+  margin: 8px 0;
+}
+
+.site-message p {
+  margin: 0 0 20px;
+}
+
+/* --- Profile menu ------------------------------------------------------- */
+
+.profile-menu {
+  position: relative;
+}
+
+.profile-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  max-width: 160px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--text-h);
+  cursor: pointer;
+}
+
+.profile-chip:hover {
+  border-color: var(--accent);
+}
+
+.profile-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 100;
+  width: min(300px, calc(100vw - 32px));
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #0d0d0d;
+  box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.8);
+}
+
+.profile-panel-title {
+  margin: 0 0 10px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.profile-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-list li {
+  display: flex;
+  gap: 6px;
+}
+
+.profile-option {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  text-align: left;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--text-h);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profile-option.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.profile-edit,
+.profile-add,
+.profile-cancel,
+.profile-delete {
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.profile-edit {
+  width: 38px;
+}
+
+.profile-add {
+  width: 100%;
+  padding: 8px;
+}
+
+.profile-edit:hover,
+.profile-add:hover,
+.profile-cancel:hover {
+  border-color: var(--accent);
+  color: var(--text-h);
+}
+
+.profile-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
+.profile-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profile-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.profile-form input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  color: var(--text-h);
+  font: inherit;
+}
+
+.profile-emojis {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+}
+
+.profile-emojis button {
+  aspect-ratio: 1;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-alt);
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.profile-emojis button.active {
+  border-color: var(--accent);
+  background: var(--accent-bg);
+}
+
+.profile-form-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.profile-cancel {
+  padding: 8px 14px;
+}
+
+.profile-delete {
+  padding: 8px;
+  color: var(--bad);
+  border-color: color-mix(in srgb, var(--bad) 40%, var(--border));
+}
+
+.profile-delete:hover {
+  background: var(--bad-bg);
+}
+
+@media (max-width: 520px) {
+  .profile-chip-name {
+    display: none;
+  }
+}
+
+.site-message-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}

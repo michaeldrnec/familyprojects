@@ -2,7 +2,7 @@
 // inward faster than beams and steer gradually toward the turret's current
 // angle -- a dogfight-timing target instead of a straight-line intercept.
 import { RIM_RADIUS, angleDelta, normalizeAngle } from './physics'
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export interface Fighter {
   id: number

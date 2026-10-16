@@ -3,6 +3,7 @@
 // over the base campaign (waves.ts / enemies.ts / economy.ts), so the wave
 // *composition* stays hand-tuned while the pressure scales. "Cadet" is the
 // original v1 balance.
+import { readScoped, writeScoped } from '../../shared/storage'
 
 export type DifficultyId = 'cadet' | 'veteran' | 'commander' | 'nightmare'
 
@@ -80,19 +81,10 @@ export const DIFFICULTY_ORDER: DifficultyId[] = ['cadet', 'veteran', 'commander'
 const STORAGE_KEY = 'ion-perimeter:difficulty'
 
 export function loadDifficulty(): DifficultyId {
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (raw && raw in DIFFICULTIES) return raw as DifficultyId
-  } catch {
-    // storage unavailable -- fall through to the default
-  }
-  return 'veteran'
+  const raw = readScoped(STORAGE_KEY)
+  return raw && raw in DIFFICULTIES ? (raw as DifficultyId) : 'veteran'
 }
 
 export function saveDifficulty(id: DifficultyId) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, id)
-  } catch {
-    // ignore -- the choice just won't be remembered next visit
-  }
+  writeScoped(STORAGE_KEY, id)
 }

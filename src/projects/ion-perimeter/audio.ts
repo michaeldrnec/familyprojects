@@ -1,12 +1,12 @@
 // Synthesized SFX via the Web Audio API only -- no audio files to source or
 // bundle, following gravity-well/audio.ts and starwarden/audio.ts exactly.
-// The AudioContext is created lazily via init(), which must be called from
-// a real user-gesture handler (the Start/Restart button) since browsers
-// block autoplay of audio created outside a gesture.
+// The site-wide AudioContext (shared/audio.ts) is first used in init(), which
+// must be called from a real user-gesture handler (the Start/Restart button)
+// since browsers block autoplay of audio created outside a gesture.
+import { createChannel, getAudioContext } from '../../shared/audio'
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
-let muted = false
 
 function makeNoiseBuffer(context: AudioContext, seconds: number): AudioBuffer {
   const buffer = context.createBuffer(1, Math.ceil(context.sampleRate * seconds), context.sampleRate)
@@ -17,24 +17,14 @@ function makeNoiseBuffer(context: AudioContext, seconds: number): AudioBuffer {
 
 export function init() {
   if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume()
+    getAudioContext() // resumes it if the browser suspended it
     return
   }
-  ctx = new AudioContext()
-  masterGain = ctx.createGain()
-  masterGain.gain.value = muted ? 0 : 1
-  masterGain.connect(ctx.destination)
-}
-
-export function setMuted(next: boolean) {
-  muted = next
-  if (masterGain && ctx) {
-    masterGain.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.05)
-  }
-}
-
-export function isMuted() {
-  return muted
+  const shared = getAudioContext()
+  const out = createChannel(1)
+  if (!shared || !out) return
+  ctx = shared
+  masterGain = out
 }
 
 function envGain(context: AudioContext, destination: AudioNode, peak: number, attack: number, release: number) {

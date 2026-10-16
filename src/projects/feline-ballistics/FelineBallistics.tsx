@@ -3,6 +3,7 @@ import { Title, RoomSelect, LevelSelect } from './screens/Menus'
 import Play from './screens/Play'
 import { levelById, nextLevel } from './levels/index'
 import type { RoomId } from './levels/types'
+import { useMuted } from '../../shared/audio'
 import { loadProgress, saveProgress, recordResult, type Progress } from './progress'
 import * as audio from './audio'
 import './FelineBallistics.css'
@@ -23,11 +24,8 @@ function initialScreen(): Screen {
 }
 
 export default function FelineBallistics() {
-  const [progress, setProgress] = useState<Progress>(() => {
-    const p = loadProgress()
-    audio.setMuted(p.settings.muted)
-    return p
-  })
+  const [progress, setProgress] = useState<Progress>(loadProgress)
+  const [muted, toggleMute] = useMuted()
   const [screen, setScreen] = useState<Screen>(initialScreen)
 
   function commit(next: Progress) {
@@ -41,12 +39,6 @@ export default function FelineBallistics() {
     setScreen(next)
   }
 
-  function toggleMute() {
-    const muted = !progress.settings.muted
-    audio.setMuted(muted)
-    commit({ ...progress, settings: { ...progress.settings, muted } })
-  }
-
   function toggleMotion() {
     commit({ ...progress, settings: { ...progress.settings, reducedMotion: !progress.settings.reducedMotion } })
   }
@@ -56,7 +48,7 @@ export default function FelineBallistics() {
   return (
     <div className="feline-ballistics fullscreen">
       {screen.kind === 'title' && (
-        <Title onPlay={() => go({ kind: 'rooms' })} settings={progress.settings} onToggleMotion={toggleMotion} onToggleMute={toggleMute} />
+        <Title onPlay={() => go({ kind: 'rooms' })} settings={progress.settings} muted={muted} onToggleMotion={toggleMotion} onToggleMute={toggleMute} />
       )}
       {screen.kind === 'rooms' && <RoomSelect progress={progress} onPick={(room) => go({ kind: 'levels', room })} onBack={() => go({ kind: 'title' })} />}
       {screen.kind === 'levels' && (
@@ -68,7 +60,7 @@ export default function FelineBallistics() {
           hasNext={!!nextLevel(level.id)}
           coachSeen={progress.coachSeen}
           reducedMotion={progress.settings.reducedMotion}
-          muted={progress.settings.muted}
+          muted={muted}
           onToggleMute={toggleMute}
           onCoachSeen={(key) => commit({ ...progress, coachSeen: [...progress.coachSeen, key] })}
           onResult={(stars, score) => commit(recordResult(progress, level.id, stars, score))}

@@ -2,7 +2,7 @@
 // letters/digits. The player is given a partial mapping up front (and can
 // reveal more, at a time cost) and has to deduce the rest to read the code.
 import { GLYPHS } from './glyphs'
-import { shuffle, type Rng } from './rng'
+import { shuffle, type Rng } from '../../shared/rng'
 
 const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'.split('')
 

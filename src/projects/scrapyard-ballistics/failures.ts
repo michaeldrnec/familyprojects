@@ -2,7 +2,7 @@
 // second rolls one of four failures; the dashboard's BYPASS clears any of
 // them after a half-power spool. Heat is its own gauge -- a "running hot"
 // failure only makes it climb faster.
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 import type { EngineStats } from './parts'
 
 export type FailureKind = 'stuck' | 'hot' | 'uneven' | 'leak'

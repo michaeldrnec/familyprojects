@@ -11,7 +11,7 @@ import { drawBattlefield, hitTest } from './render/battlefield'
 import { copyText, encodePlan } from './share'
 import { planEnergy, planProblem, simulate } from './sim'
 import type { Level, Plan, Platform, Target, WeaponId } from './types'
-import { pointerPos, useCanvasLoop } from './useCanvas'
+import { pointerPos, useCanvasLoop } from '../../shared/useCanvasLoop'
 import { WEAPONS } from './weapons'
 
 interface Props {

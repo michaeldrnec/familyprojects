@@ -1,6 +1,7 @@
 // Purely visual feedback: particle bursts, shockwave rings, score floaters,
 // screen shake, and flashes. Nothing here affects gameplay.
-import type { Rng } from './rng'
+import { prefersReducedMotion } from '../../shared/motion'
+import type { Rng } from '../../shared/rng'
 
 export interface Particle {
   x: number
@@ -76,12 +77,16 @@ export function floater(fx: Effects, x: number, y: number, text: string, color: 
   fx.floaters.push({ x, y, text, color, age: 0, size })
 }
 
+// Screen shake is skipped when the player has asked for reduced motion.
 export function shake(fx: Effects, seconds: number, magnitude: number) {
+  if (prefersReducedMotion()) return
   fx.shake = Math.max(fx.shake, seconds)
   fx.shakeMag = Math.max(fx.shakeMag, magnitude)
 }
 
+// Full-screen flashes are skipped too, for the same reason.
 export function flash(fx: Effects, color = '255,255,255') {
+  if (prefersReducedMotion()) return
   fx.flash = FLASH_LIFE
   fx.flashColor = color
 }

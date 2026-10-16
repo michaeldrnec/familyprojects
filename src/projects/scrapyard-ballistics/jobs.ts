@@ -3,7 +3,7 @@
 // done (or passed on). Targets scale off your best altitude so there is
 // always something reachable that pays a little better than altitude cash.
 import type { FlightOutcome } from './flight'
-import { makeRng, type Rng } from './rng'
+import { makeRng, type Rng } from '../../shared/rng'
 import { formatAlt } from './format'
 import type { Blueprint } from './workshop'
 

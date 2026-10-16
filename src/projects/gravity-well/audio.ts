@@ -3,13 +3,14 @@
 // source or bundle. A launch whoosh, an impact boom on crash, a triumphant
 // arpeggio on landing, and a soft UI blip for buttons.
 //
-// The AudioContext is created lazily via init(), which callers must invoke
-// from a real user-gesture handler (launch() only ever runs as a direct
-// result of a pointerup or button click, so that's the natural place).
+// The site-wide AudioContext (shared/audio.ts) is first used in init(), which
+// callers must invoke from a real user-gesture handler (launch() only ever
+// runs as a direct result of a pointerup or button click, so that's the
+// natural place).
+import { createChannel, getAudioContext } from '../../shared/audio'
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
-let muted = false
 
 function makeNoiseBuffer(context: AudioContext, seconds: number): AudioBuffer {
   const buffer = context.createBuffer(1, Math.ceil(context.sampleRate * seconds), context.sampleRate)
@@ -20,24 +21,14 @@ function makeNoiseBuffer(context: AudioContext, seconds: number): AudioBuffer {
 
 export function init() {
   if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume()
+    getAudioContext() // resumes it if the browser suspended it
     return
   }
-  ctx = new AudioContext()
-  masterGain = ctx.createGain()
-  masterGain.gain.value = muted ? 0 : 1
-  masterGain.connect(ctx.destination)
-}
-
-export function setMuted(next: boolean) {
-  muted = next
-  if (masterGain && ctx) {
-    masterGain.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.05)
-  }
-}
-
-export function isMuted() {
-  return muted
+  const shared = getAudioContext()
+  const out = createChannel(1)
+  if (!shared || !out) return
+  ctx = shared
+  masterGain = out
 }
 
 function envGain(context: AudioContext, destination: AudioNode, peak: number, attack: number, release: number) {

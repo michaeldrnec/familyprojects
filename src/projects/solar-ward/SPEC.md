@@ -4,7 +4,8 @@
 > beams and diving fighters, and keep the core's five sectors alive as the assault never stops
 > escalating.
 
-Status: **draft spec — not yet built**. This document describes the design; no game code exists yet.
+Status: **built.** Playable at `/solar-ward`. This is the original design document; the code is the reference
+for exact tuning values. Like the spec, it is keyboard-only for now.
 
 ## 1. Pitch
 

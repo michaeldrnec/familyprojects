@@ -6,7 +6,8 @@ import * as audio from './audio'
 import { drawBattlefield } from './render/battlefield'
 import { PHASE_T, type SimResult } from './sim'
 import type { Level } from './types'
-import { useCanvasLoop } from './useCanvas'
+import { useCanvasLoop } from '../../shared/useCanvasLoop'
+import { usePauseOnHide } from '../../shared/usePauseOnHide'
 
 const SECONDS_PER_TICK = 1.2
 const TAIL = 0.6 // let the last explosions play out before the debrief
@@ -24,6 +25,8 @@ export default function Execute({ level, result, title, debrief, onEdit }: Props
   const tauRef = useRef(0)
   const [tau, setTau] = useState(0)
   const [playing, setPlaying] = useState(true)
+  // Replays stop when the player leaves, so they don't miss the strike.
+  usePauseOnHide(() => setPlaying(false), playing)
   const [speed, setSpeed] = useState(1)
   const [done, setDone] = useState(false)
   const playingRef = useRef(playing)

@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react'
 import { buildPuzzle, type PoolTile, type Puzzle } from './words'
+import GameBanner from '../../shared/ui/GameBanner'
+import WinBanner from '../../shared/ui/WinBanner'
 import './Trigaword.css'
 
 interface Cell {
@@ -106,12 +108,7 @@ function Trigaword() {
 
   return (
     <div className="trigaword">
-      <h1 className="sr-only">Trigaword</h1>
-      <img
-        src="/trigaword_logo.png"
-        alt="Trigaword — The Pyramid Puzzle Challenge"
-        className="banner"
-      />
+      <GameBanner title="Trigaword" src="/trigaword_logo.webp" alt="Trigaword — The Pyramid Puzzle Challenge" maxWidth={420} />
       <p>
         Fill in every blank using the letters below. Each row is its own word;
         the first letter is already given. Click a letter, then click a blank
@@ -120,10 +117,7 @@ function Trigaword() {
       </p>
 
       {won && (
-        <div className="win">
-          🎉 Solved it!
-          <button type="button" onClick={newPuzzle}>New puzzle</button>
-        </div>
+        <WinBanner action={{ label: 'New puzzle', onClick: newPuzzle }}>🎉 Solved it!</WinBanner>
       )}
 
       <div className="pyramid">

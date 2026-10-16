@@ -52,7 +52,7 @@ import {
   type OrbitElements,
 } from './orbit'
 import { rollFailure, BYPASS_TIME, FAILURE_LABEL, type FailureKind } from './failures'
-import { makeRng, type Rng } from './rng'
+import { makeRng, type Rng } from '../../shared/rng'
 import { HARD_LANDING, WORN_FAILURE } from './wear'
 import type { TrackPoint } from './progress'
 

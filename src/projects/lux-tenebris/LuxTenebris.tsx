@@ -7,6 +7,9 @@ import { VIEW_H, VIEW_W, drawDarkness, drawEcho, drawEmissives, drawPlayer, draw
 import { solve } from './solver'
 import { DIFFICULTIES, isUnlocked, loadProgress, saveProgress, type DifficultyId, type Progress } from './progress'
 import * as audio from './audio'
+import { scaledContext, useHiDpiCanvas } from '../../shared/hiDpiCanvas'
+import { useMuted } from '../../shared/audio'
+import { usePauseOnHide } from '../../shared/usePauseOnHide'
 import './LuxTenebris.css'
 
 type Screen = 'title' | 'select' | 'play' | 'clear'
@@ -74,7 +77,9 @@ function LuxTenebris() {
   const [levelIndex, setLevelIndex] = useState(0)
   const [hud, setHud] = useState({ battery: 0, batteryMax: 1, time: 0, timeLimit: 1, echoes: 0, started: false, status: 'playing' })
   const [clear, setClear] = useState<ClearResult | null>(null)
-  const [muted, setMuted] = useState(audio.isMuted())
+  const [muted, toggleSiteMute] = useMuted()
+  // Air stops running while paused (only offered once the clock has started).
+  const [paused, setPaused] = useState(false)
 
   const level = LEVELS[levelIndex]
   const grid = useMemo(() => parseLevel(level.map), [level])
@@ -83,6 +88,7 @@ function LuxTenebris() {
   const difficulty = DIFFICULTIES.find((d) => d.id === progress.difficulty)!
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  useHiDpiCanvas(canvasRef, VIEW_W, VIEW_H)
   const maskRef = useRef<HTMLCanvasElement | null>(null)
   const screenRef = useRef<Screen>('title')
   const playRef = useRef<PlayState>(initialState(level, grid))
@@ -104,6 +110,10 @@ function LuxTenebris() {
   useEffect(() => {
     screenRef.current = screen
   }, [screen])
+
+  const pausedRef = useRef(false)
+  pausedRef.current = paused && screen === 'play'
+  usePauseOnHide(() => setPaused(true), screen === 'play' && hud.started && hud.status === 'playing' && !paused)
 
   function syncHud(s: PlayState) {
     setHud({
@@ -131,6 +141,7 @@ function LuxTenebris() {
     endRef.current = null
     bufferedRef.current = null
     levelStartRef.current = nowRef.current
+    setPaused(false)
     syncHud(s)
   }
 
@@ -175,7 +186,7 @@ function LuxTenebris() {
   }
 
   function tryMove(dx: number, dy: number) {
-    if (screenRef.current !== 'play' || playRef.current.status !== 'playing') return
+    if (screenRef.current !== 'play' || playRef.current.status !== 'playing' || pausedRef.current) return
     if (nowRef.current - lastMoveRef.current < MOVE_INTERVAL) {
       bufferedRef.current = { dx, dy }
       return
@@ -185,13 +196,13 @@ function LuxTenebris() {
   }
 
   function aimAt(angle: number) {
-    if (screenRef.current !== 'play' || playRef.current.status !== 'playing') return
+    if (screenRef.current !== 'play' || playRef.current.status !== 'playing' || pausedRef.current) return
     if (Math.abs(angleDiff(playRef.current.facing, angle)) < 0.01) return
     dispatch({ type: 'aim', angle })
   }
 
   function sendEcho() {
-    if (screenRef.current !== 'play' || playRef.current.status !== 'playing') return
+    if (screenRef.current !== 'play' || playRef.current.status !== 'playing' || pausedRef.current) return
     dispatch({ type: 'echo' })
   }
 
@@ -221,7 +232,8 @@ function LuxTenebris() {
     const now = nowRef.current
     const s0 = playRef.current
     if (screenRef.current === 'play') {
-      if (s0.status === 'playing') {
+      if (pausedRef.current) audio.setHum(false, 0)
+      else if (s0.status === 'playing') {
         dispatch({ type: 'tick', dt })
         if (bufferedRef.current && now - lastMoveRef.current >= MOVE_INTERVAL) {
           const b = bufferedRef.current
@@ -259,7 +271,7 @@ function LuxTenebris() {
 
   function draw() {
     const canvas = canvasRef.current
-    const ctx = canvas?.getContext('2d')
+    const ctx = canvas && scaledContext(canvas)
     if (!canvas || !ctx) return
     if (!maskRef.current) maskRef.current = document.createElement('canvas')
     const now = nowRef.current
@@ -384,6 +396,11 @@ function LuxTenebris() {
     function onKey(e: KeyboardEvent) {
       if (screenRef.current !== 'play') return
       const key = e.key.toLowerCase()
+      if (key === 'p' && playRef.current.started && playRef.current.status === 'playing') {
+        setPaused((p) => !p)
+        return
+      }
+      if (pausedRef.current) return
       const dir = DIRS[key]
       if (dir) {
         e.preventDefault()
@@ -433,6 +450,7 @@ function LuxTenebris() {
   // --- screens -------------------------------------------------------------
   function startLevel(i: number) {
     audio.init()
+    setPaused(false)
     setLevelIndex(i)
     setClear(null)
     setScreen('play')
@@ -447,8 +465,7 @@ function LuxTenebris() {
 
   function toggleMute() {
     audio.init()
-    audio.setMuted(!muted)
-    setMuted(!muted)
+    toggleSiteMute()
   }
 
   const stars = progress.stars[progress.difficulty]
@@ -510,6 +527,15 @@ function LuxTenebris() {
               <span>The air starts running on your first move or look.</span>
             </div>
           )}
+          {screen === 'play' && paused && (
+            <div className="lt-overlay">
+              <h1>Paused</h1>
+              <p className="lt-tagline">Your air stops running while you're away.</p>
+              <button className="lt-primary" onClick={() => setPaused(false)}>
+                Resume
+              </button>
+            </div>
+          )}
           {screen === 'play' && hud.status === 'fallen' && <div className="lt-toast">You fell into the dark…</div>}
           {screen === 'play' && hud.status === 'timeout' && <div className="lt-toast">Out of air…</div>}
 
@@ -525,7 +551,7 @@ function LuxTenebris() {
                   <kbd>↑↓←→</kbd> / <kbd>WASD</kbd> walk · <kbd>Shift</kbd>+direction or mouse to aim
                 </li>
                 <li>
-                  <kbd>E</kbd> echo · <kbd>R</kbd> restart · <kbd>Esc</kbd> caverns
+                  <kbd>E</kbd> echo · <kbd>R</kbd> restart · <kbd>P</kbd> pause · <kbd>Esc</kbd> caverns
                 </li>
               </ul>
               <div className="lt-difficulty">

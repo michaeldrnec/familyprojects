@@ -50,11 +50,15 @@ import {
 import { NOVA_CLEAR_MARGIN, NOVA_FLASH_DURATION, NOVA_MAX_CHARGES, NOVA_RECHARGE_TIME } from './nova'
 import { survivalPoints } from './scoring'
 import { formatTime, loadProgress, recordRun, type Progress } from './progress'
-import { makeRng, type Rng } from './rng'
+import { makeRng, type Rng } from '../../shared/rng'
 import * as audio from './audio'
+import { scaledContext, useHiDpiCanvas } from '../../shared/hiDpiCanvas'
+import { useMuted } from '../../shared/audio'
+import { useReducedMotion } from '../../shared/motion'
+import { usePauseOnHide } from '../../shared/usePauseOnHide'
 import './Starwarden.css'
 
-type Phase = 'intro' | 'playing' | 'gameover'
+type Phase = 'intro' | 'playing' | 'paused' | 'gameover'
 
 const LASER_SPEED = 520
 const LASER_COOLDOWN = 0.22
@@ -978,9 +982,10 @@ function Starwarden() {
   const [finalScore, setFinalScore] = useState(0)
   const [finalTime, setFinalTime] = useState(0)
   const [finalLevel, setFinalLevel] = useState(1)
-  const [muted, setMuted] = useState(false)
+  const [muted, toggleSiteMute] = useMuted()
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  useHiDpiCanvas(canvasRef, VIEW_WIDTH, VIEW_HEIGHT, { capToLogical: true })
   const rafRef = useRef<number | null>(null)
   const phaseRef = useRef<Phase>('intro')
   const gsRef = useRef<GameState>(newGame(1))
@@ -989,15 +994,46 @@ function Starwarden() {
   // Edge-detects the nova key so holding it down doesn't burn every charge
   // in a single press -- only a fresh keydown (or touch tap) fires it.
   const novaPrevRef = useRef(false)
+  const reducedMotion = useReducedMotion()
+  const reducedMotionRef = useRef(reducedMotion)
+  reducedMotionRef.current = reducedMotion
 
   useEffect(() => {
     phaseRef.current = phase
   }, [phase])
 
+  // Pausing only ever reads refs and calls state setters, so the
+  // mount-only key handler below can call these safely.
+  function pause() {
+    if (phaseRef.current !== 'playing') return
+    phaseRef.current = 'paused'
+    keysRef.current = { up: false, down: false, left: false, right: false, thrust: false, fire: false, nova: false }
+    gsRef.current.ship.thrusting = false
+    audio.setThrusterOn(false)
+    setPhase('paused')
+  }
+
+  function resume() {
+    if (phaseRef.current !== 'paused') return
+    audio.init()
+    phaseRef.current = 'playing'
+    setPhase('playing')
+  }
+
+  usePauseOnHide(pause, phase === 'playing')
+
   useEffect(() => {
     function onDown(e: KeyboardEvent) {
       const key = e.key.toLowerCase()
       const k = keysRef.current
+      if (key === 'escape' || key === 'p') {
+        if (e.repeat) return
+        if (phaseRef.current === 'playing') pause()
+        else if (phaseRef.current === 'paused') resume()
+        e.preventDefault()
+        return
+      }
+      if (phaseRef.current === 'paused') return
       if (key === 'arrowup' || key === 'w') k.up = true
       else if (key === 'arrowdown' || key === 's') k.down = true
       else if (key === 'arrowleft' || key === 'a') k.left = true
@@ -1378,7 +1414,7 @@ function Starwarden() {
   function draw() {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    const ctx = scaledContext(canvas)
     if (!ctx) return
     const gs = gsRef.current
     const camX = cameraX(gs)
@@ -1391,7 +1427,7 @@ function Starwarden() {
 
     // Everything in the world shakes on impact; the HUD stays put.
     ctx.save()
-    if (gs.shakeTimer > 0) {
+    if (gs.shakeTimer > 0 && !reducedMotionRef.current) {
       const mag = SHAKE_MAGNITUDE * (gs.shakeTimer / SHAKE_DURATION)
       ctx.translate((Math.random() * 2 - 1) * mag, (Math.random() * 2 - 1) * mag)
     }
@@ -1462,7 +1498,8 @@ function Starwarden() {
     drawHud(ctx, gs)
 
     if (gs.novaFlashTimer > 0) {
-      const alpha = (gs.novaFlashTimer / NOVA_FLASH_DURATION) * 0.5
+      // Kept faint when the player has asked for reduced motion.
+      const alpha = (gs.novaFlashTimer / NOVA_FLASH_DURATION) * (reducedMotionRef.current ? 0.12 : 0.5)
       ctx.fillStyle = `rgba(224,242,254,${alpha})`
       ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT)
     }
@@ -1500,9 +1537,7 @@ function Starwarden() {
 
   function toggleMute() {
     audio.init()
-    const next = !muted
-    audio.setMuted(next)
-    setMuted(next)
+    toggleSiteMute()
   }
 
   // On-screen touch controls (spec.md's keyboard-only v1, extended for
@@ -1538,6 +1573,11 @@ function Starwarden() {
         <button type="button" className="sw-mute" onClick={toggleMute} aria-label={muted ? 'Unmute sound' : 'Mute sound'}>
           {muted ? '🔇' : '🔊'}
         </button>
+        {phase === 'playing' && (
+          <button type="button" className="sw-mute sw-pause" onClick={pause} aria-label="Pause">
+            ⏸
+          </button>
+        )}
 
         {phase === 'playing' && (
           <div className="sw-touch-controls" aria-hidden="true">
@@ -1580,6 +1620,7 @@ function Starwarden() {
               <li><kbd>X</kbd> fire laser (uses a power crystal)</li>
               <li><kbd>C</kbd> Nova Bomb — clears the screen (recharges over time)</li>
               <li>Your shield blocks one hit, then recharges · chain kills for a combo multiplier</li>
+              <li><kbd>Esc</kbd> or <kbd>P</kbd> pause</li>
             </ul>
             {progress.bestScore > 0 && (
               <p className="sw-best">
@@ -1590,6 +1631,19 @@ function Starwarden() {
             <button type="button" className="sw-primary" onClick={start}>
               Launch
             </button>
+          </div>
+        )}
+
+        {phase === 'paused' && (
+          <div className="sw-overlay">
+            <h1>Paused</h1>
+            <p className="sw-tagline">Take a breather. The warzone will wait.</p>
+            <button type="button" className="sw-primary" onClick={resume}>
+              Resume
+            </button>
+            <p className="sw-best">
+              <kbd>Esc</kbd> or <kbd>P</kbd> pauses and resumes
+            </p>
           </div>
         )}
 

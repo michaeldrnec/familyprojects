@@ -1,14 +1,14 @@
-// Retro arcade sound effects, synthesized entirely with the Web Audio API
-// -- same technique as gravity-well/audio.ts and starwarden/audio.ts, no
-// audio files to source or bundle.
+// Retro arcade sound effects, synthesized entirely with the Web Audio API --
+// same technique as gravity-well/audio.ts and starwarden/audio.ts, no audio
+// files to source or bundle.
 //
-// The AudioContext is created lazily via init(), which callers must invoke
-// from a real user-gesture handler (the Launch button's onClick) --
-// browsers block autoplay of audio created outside a gesture.
+// The site-wide AudioContext (shared/audio.ts) is first used in init(), which
+// callers must invoke from a real user-gesture handler (the Launch button's
+// onClick) -- browsers block autoplay of audio created outside a gesture.
+import { createChannel, getAudioContext } from '../../shared/audio'
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
-let muted = false
 
 let thrusterGain: GainNode | null = null
 
@@ -21,13 +21,14 @@ function makeNoiseBuffer(context: AudioContext, seconds: number): AudioBuffer {
 
 export function init() {
   if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume()
+    getAudioContext() // resumes it if the browser suspended it
     return
   }
-  ctx = new AudioContext()
-  masterGain = ctx.createGain()
-  masterGain.gain.value = muted ? 0 : 1
-  masterGain.connect(ctx.destination)
+  const shared = getAudioContext()
+  const out = createChannel(1)
+  if (!shared || !out) return
+  ctx = shared
+  masterGain = out
 
   // Continuous looping noise source for the thruster hum, gated by a gain
   // node ramped up/down rather than starting/stopping the source itself
@@ -45,15 +46,6 @@ export function init() {
   filter.connect(thrusterGain)
   thrusterGain.connect(masterGain)
   noise.start()
-}
-
-export function setMuted(next: boolean) {
-  muted = next
-  if (masterGain && ctx) masterGain.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.05)
-}
-
-export function isMuted() {
-  return muted
 }
 
 export function setThrusterOn(on: boolean) {

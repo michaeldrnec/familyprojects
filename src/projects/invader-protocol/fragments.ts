@@ -1,7 +1,7 @@
 // Enemy projectiles: plasma bolts from the formation, and the erratic
 // explosive shards a Heavy Grunt drops when its power supply ruptures.
 import { BOLT_DAMAGE, BOLT_SPEED, FRAGMENT_COUNT, FRAGMENT_DAMAGE, FRAGMENT_SPEED } from './constants'
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export interface EnemyShot {
   kind: 'bolt' | 'fragment'

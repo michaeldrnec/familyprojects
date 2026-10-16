@@ -3,7 +3,7 @@
 // kind* of thing fires (a beam, a fan of beams, or a fighter launch) --
 // turning that into actual Beam/Fighter entities is the caller's job (see
 // SolarWard.tsx), which keeps this module ignorant of those shapes.
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export const RIM_POST_COUNT = 8
 

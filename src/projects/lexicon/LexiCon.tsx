@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { QUESTIONS, type Question } from './questions'
-import Confetti from './Confetti'
+import GameBanner from '../../shared/ui/GameBanner'
+import ResultCard from '../../shared/ui/ResultCard'
 import './LexiCon.css'
 
 const CONFETTI_THRESHOLD = 80
@@ -69,8 +70,7 @@ function LexiCon() {
   if (!round) {
     return (
       <div className="lexicon">
-        <h1 className="sr-only">LexiCon</h1>
-        <img src="/LexiconLogo.jpeg" alt="LexiCon — A Word Trivia Game" className="banner" />
+        <GameBanner title="LexiCon" src="/lexicon_logo.webp" alt="LexiCon — A Word Trivia Game" maxWidth={600} />
         <p>Trivia — pick a round length and see how many you can get right.</p>
 
         <div className="setup">
@@ -100,18 +100,13 @@ function LexiCon() {
 
   return (
     <div className="lexicon">
-      <h1 className="sr-only">LexiCon</h1>
-      <img src="/LexiconLogo.jpeg" alt="LexiCon — A Word Trivia Game" className="banner" />
+      <GameBanner title="LexiCon" src="/lexicon_logo.webp" alt="LexiCon — A Word Trivia Game" maxWidth={600} />
       <p>Trivia — pick a round length and see how many you can get right.</p>
 
       {finished ? (
-        <div className="results">
-          {percent >= CONFETTI_THRESHOLD && <Confetti />}
-          <p className="score">
-            {correctCount} / {total} correct ({percent}%)
-          </p>
+        <ResultCard score={`${correctCount} / ${total} correct (${percent}%)`} celebrate={percent >= CONFETTI_THRESHOLD}>
           <button type="button" onClick={restart}>Play Again</button>
-        </div>
+        </ResultCard>
       ) : (
         <>
           <p className="progress">

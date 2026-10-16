@@ -23,7 +23,7 @@ import { MAX_DESIGNS, STARTER_DESIGN_NAME, starterBlueprint, type SaveData } fro
 import { planStaging } from './staging'
 import { wornUids } from './wear'
 import { WIRE_COLORS, drawBlueprint, hitTest, layoutBlueprint, type Ghost } from './render/blueprint'
-import { pointerPos, useCanvasLoop } from './useCanvas'
+import { pointerPos, useCanvasLoop } from '../../shared/useCanvasLoop'
 import { formatSpeed, partSpecs } from './format'
 import * as audio from './audio'
 

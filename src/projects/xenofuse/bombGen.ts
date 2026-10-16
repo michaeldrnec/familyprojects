@@ -5,7 +5,7 @@
 import { generateCipher, type CipherPuzzle } from './cipher'
 import { generateNumerals, type NumeralPuzzle } from './numerals'
 import { generateSequence, type SeqRule, type SequencePuzzle } from './sequences'
-import { shuffle, type Rng } from './rng'
+import { shuffle, type Rng } from '../../shared/rng'
 
 export type Puzzle = CipherPuzzle | NumeralPuzzle | SequencePuzzle
 

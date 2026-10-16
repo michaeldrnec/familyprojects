@@ -1,11 +1,12 @@
-// Persistent progress (SPEC.md section 8), following ion-perimeter/progress.ts:
-// one localStorage key, defensive reads, every write wrapped in try/catch.
-
-const STORAGE_KEY = 'feline-ballistics:progress'
+// Persistent progress (SPEC.md section 8), saved through the site's shared
+// storage helper (per player profile, versioned, never throws). Sound is
+// muted site-wide (shared/audio.ts), so it isn't part of this save.
+import { createStore } from '../../shared/storage'
+import { prefersReducedMotion } from '../../shared/motion'
+import { ALL_LEVELS } from './levels'
 
 export interface Settings {
   reducedMotion: boolean
-  muted: boolean
 }
 
 export interface Progress {
@@ -15,16 +16,8 @@ export interface Progress {
   settings: Settings
 }
 
-function prefersReducedMotion(): boolean {
-  try {
-    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  } catch {
-    return false
-  }
-}
-
 export function freshProgress(): Progress {
-  return { stars: {}, best: {}, coachSeen: [], settings: { reducedMotion: prefersReducedMotion(), muted: false } }
+  return { stars: {}, best: {}, coachSeen: [], settings: { reducedMotion: prefersReducedMotion() } }
 }
 
 function numberRecord(v: unknown): Record<string, number> {
@@ -35,33 +28,32 @@ function numberRecord(v: unknown): Record<string, number> {
   return out
 }
 
-export function loadProgress(): Progress {
-  const base = freshProgress()
-  try {
-    const raw = window.localStorage.getItem(STORAGE_KEY)
-    if (!raw) return base
-    const p = JSON.parse(raw)
+const store = createStore<Progress>({
+  key: 'feline-ballistics:progress',
+  version: 1,
+  defaults: freshProgress,
+  parse(p) {
+    const base = freshProgress()
     return {
       stars: numberRecord(p.stars),
       best: numberRecord(p.best),
       coachSeen: Array.isArray(p.coachSeen) ? p.coachSeen.filter((s: unknown) => typeof s === 'string') : [],
       settings: {
         reducedMotion: typeof p.settings?.reducedMotion === 'boolean' ? p.settings.reducedMotion : base.settings.reducedMotion,
-        muted: !!p.settings?.muted,
       },
     }
-  } catch {
-    return base
-  }
-}
+  },
+  summary: {
+    slug: 'feline-ballistics',
+    describe(p) {
+      const cleared = ALL_LEVELS.filter((l) => (p.stars[l.id] ?? 0) > 0).length
+      return cleared > 0 ? `${cleared}/${ALL_LEVELS.length} levels` : null
+    },
+  },
+})
 
-export function saveProgress(p: Progress) {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(p))
-  } catch {
-    // Storage disabled -- the session still plays, it just won't persist.
-  }
-}
+export const loadProgress = store.load
+export const saveProgress = store.save
 
 // Record a finished level; returns the updated progress.
 export function recordResult(p: Progress, levelId: string, stars: number, score: number): Progress {

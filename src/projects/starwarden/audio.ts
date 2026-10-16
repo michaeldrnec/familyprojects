@@ -1,16 +1,17 @@
-// Retro arcade sound effects, synthesized entirely with the Web Audio API
-// -- no audio files to source or bundle. Everything is built from
-// oscillators (laser zaps, chimes) and filtered noise bursts (explosions,
-// the continuous thruster hum), each with a short gain envelope for that
-// classic 8-bit "bleep/bloop" character.
+// Retro arcade sound effects, synthesized entirely with the Web Audio API --
+// no audio files to source or bundle. Everything is built from oscillators
+// (laser zaps, chimes) and filtered noise bursts (explosions, the continuous
+// thruster hum), each with a short gain envelope for that classic 8-bit
+// "bleep/bloop" character.
 //
-// The AudioContext is created lazily via init(), which callers must invoke
-// from a real user-gesture handler (e.g. the Launch button's onClick) --
-// browsers block autoplay of audio created outside a gesture.
+// The site-wide AudioContext (shared/audio.ts) is first used in init(), which
+// callers must invoke from a real user-gesture handler (e.g. the Launch
+// button's onClick) -- browsers block autoplay of audio created outside a
+// gesture.
+import { createChannel, getAudioContext } from '../../shared/audio'
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
-let muted = false
 
 let thrusterGain: GainNode | null = null
 
@@ -23,13 +24,14 @@ function makeNoiseBuffer(context: AudioContext, seconds: number): AudioBuffer {
 
 export function init() {
   if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume()
+    getAudioContext() // resumes it if the browser suspended it
     return
   }
-  ctx = new AudioContext()
-  masterGain = ctx.createGain()
-  masterGain.gain.value = muted ? 0 : 1
-  masterGain.connect(ctx.destination)
+  const shared = getAudioContext()
+  const out = createChannel(1)
+  if (!shared || !out) return
+  ctx = shared
+  masterGain = out
 
   // Continuous looping noise source for the thruster hum, gated by a gain
   // node whose value is ramped up/down rather than starting/stopping the
@@ -47,17 +49,6 @@ export function init() {
   filter.connect(thrusterGain)
   thrusterGain.connect(masterGain)
   noise.start()
-}
-
-export function setMuted(next: boolean) {
-  muted = next
-  if (masterGain && ctx) {
-    masterGain.gain.setTargetAtTime(muted ? 0 : 1, ctx.currentTime, 0.05)
-  }
-}
-
-export function isMuted() {
-  return muted
 }
 
 export function setThrusterOn(on: boolean) {
@@ -222,7 +213,6 @@ export function playShieldRegen() {
     osc.stop(start + 0.22)
   })
 }
-
 
 // The shield absorbing a hit: a glassy downward crack.
 export function playShieldBreak() {

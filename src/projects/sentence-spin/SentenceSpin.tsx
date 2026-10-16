@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { ALPHABET, randomTheme, themeContainsWord, type Theme } from './themes'
 import { isValidWord } from './words'
+import GameBanner from '../../shared/ui/GameBanner'
+import WinBanner from '../../shared/ui/WinBanner'
 import './SentenceSpin.css'
 
 const WIN_LENGTH = 7
@@ -163,12 +165,7 @@ function SentenceSpin() {
 
   return (
     <div className="sentence-spin">
-      <h1 className="sr-only">Sentence Spin</h1>
-      <img
-        src="/sentence_spin_logo.png"
-        alt="Sentence Spin"
-        className="banner"
-      />
+      <GameBanner title="Sentence Spin" src="/sentence_spin_logo.webp" alt="Sentence Spin" maxWidth={480} />
       <p>
         Spin the wheel for a letter, then type any word that starts with it —
         any real word works, but at least one word in your finished sentence
@@ -208,11 +205,9 @@ function SentenceSpin() {
       </div>
 
       {won ? (
-        <div className="win">
-          🎉 You built a {sentenceWords.length}-word sentence for the "
-          {theme.name}" theme!
-          <button type="button" onClick={newGame}>New Game</button>
-        </div>
+        <WinBanner action={{ label: 'New Game', onClick: newGame }}>
+          🎉 You built a {sentenceWords.length}-word sentence for the "{theme.name}" theme!
+        </WinBanner>
       ) : (
         <>
           {currentLetter && !spinning && (

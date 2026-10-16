@@ -1,83 +1,21 @@
-import { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './Layout'
 import Home from './Home'
-import LetterLadder from './projects/letter-ladder/LetterLadder'
-import Trigaword from './projects/trigaword/Trigaword'
-import Flashigana from './projects/flashigana/Flashigana'
-import Rainglow from './projects/rainglow/Rainglow'
-import LexiCon from './projects/lexicon/LexiCon'
-import GravityWell from './projects/gravity-well/GravityWell'
-import Xenofuse from './projects/xenofuse/Xenofuse'
-import Starwarden from './projects/starwarden/Starwarden'
-import SolarWard from './projects/solar-ward/SolarWard'
-import IonPerimeter from './projects/ion-perimeter/IonPerimeter'
-import LuxTenebris from './projects/lux-tenebris/LuxTenebris'
-import InvaderProtocol from './projects/invader-protocol/InvaderProtocol'
+import NotFound from './site/NotFound'
+import { projects } from './projects'
 
-// Sentence Spin bundles a full ~370k-word dictionary (for free-form word
-// validation) that would otherwise bloat every route's initial load, so
-// it's code-split into its own chunk, fetched only when this route is hit.
-const SentenceSpin = lazy(() => import('./projects/sentence-spin/SentenceSpin'))
-// Scrapyard Ballistics is the only project pulling in a physics engine
-// (matter-js), so it gets the same code-split treatment.
-const ScrapyardBallistics = lazy(() => import('./projects/scrapyard-ballistics/ScrapyardBallistics'))
-// Feline Ballistics also uses matter-js; the physics code lands in a chunk
-// shared with Scrapyard rather than the main bundle.
-const FelineBallistics = lazy(() => import('./projects/feline-ballistics/FelineBallistics'))
-// Orbital Siege carries 24 levels, a puzzle generator and a brute-force
-// solver, so it loads on demand too.
-const OrbitalSiege = lazy(() => import('./projects/orbital-siege/OrbitalSiege'))
-
+// Every game route comes from the registry in projects.ts, and every game
+// is code-split: Layout's <Suspense> shows a loading screen while a game's
+// chunk downloads.
 function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/letter-ladder" element={<LetterLadder />} />
-        <Route path="/trigaword" element={<Trigaword />} />
-        <Route path="/flashigana" element={<Flashigana />} />
-        <Route path="/rainglow" element={<Rainglow />} />
-        <Route path="/lexicon" element={<LexiCon />} />
-        <Route path="/gravity-well" element={<GravityWell />} />
-        <Route path="/xenofuse" element={<Xenofuse />} />
-        <Route path="/starwarden" element={<Starwarden />} />
-        <Route path="/solar-ward" element={<SolarWard />} />
-        <Route path="/ion-perimeter" element={<IonPerimeter />} />
-        <Route path="/lux-tenebris" element={<LuxTenebris />} />
-        <Route path="/invader-protocol" element={<InvaderProtocol />} />
-        <Route
-          path="/scrapyard-ballistics"
-          element={
-            <Suspense fallback={<p>Loading…</p>}>
-              <ScrapyardBallistics />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/feline-ballistics"
-          element={
-            <Suspense fallback={<p>Loading…</p>}>
-              <FelineBallistics />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/orbital-siege"
-          element={
-            <Suspense fallback={<p>Loading…</p>}>
-              <OrbitalSiege />
-            </Suspense>
-          }
-        />
-        <Route
-          path="/sentence-spin"
-          element={
-            <Suspense fallback={<p>Loading…</p>}>
-              <SentenceSpin />
-            </Suspense>
-          }
-        />
+        {projects.map((p) => (
+          <Route key={p.slug} path={`/${p.slug}`} element={<p.component />} />
+        ))}
+        <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
   )

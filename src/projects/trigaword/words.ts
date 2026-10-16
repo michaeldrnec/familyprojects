@@ -4,6 +4,8 @@
 // noise. The 2-letter list is hand-curated -- valid English 2-letter words
 // are a small, fixed set and the corpus intersection there is mostly noise
 // (state codes, initials) rather than real words.
+import { isFamilySafe } from '../../shared/familySafe'
+
 export const WORDS_2: string[] = [
   'AM', 'AN', 'AS', 'AT', 'BE', 'BY', 'DO', 'GO', 'HE', 'HI',
   'IF', 'IN', 'IS', 'IT', 'ME', 'MY', 'NO', 'OF', 'OK', 'ON',
@@ -642,14 +644,15 @@ export const WORDS_8: string[] = [
 
 export type WordLength = 2 | 3 | 4 | 5 | 6 | 7 | 8
 
+// Puzzles are random, so only family-safe words may be picked.
 const WORD_LISTS: Record<WordLength, string[]> = {
-  2: WORDS_2,
-  3: WORDS_3,
-  4: WORDS_4,
-  5: WORDS_5,
-  6: WORDS_6,
-  7: WORDS_7,
-  8: WORDS_8,
+  2: WORDS_2.filter(isFamilySafe),
+  3: WORDS_3.filter(isFamilySafe),
+  4: WORDS_4.filter(isFamilySafe),
+  5: WORDS_5.filter(isFamilySafe),
+  6: WORDS_6.filter(isFamilySafe),
+  7: WORDS_7.filter(isFamilySafe),
+  8: WORDS_8.filter(isFamilySafe),
 }
 
 export const ROW_LENGTHS: WordLength[] = [2, 3, 4, 5, 6, 7, 8]

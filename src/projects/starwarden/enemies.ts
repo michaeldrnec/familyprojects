@@ -12,7 +12,7 @@
 // - carrier: the mini-boss every 5th escalation level; its core only takes
 //   damage while its hatch is open, and it launches drifters.
 import { VIEW_HEIGHT, Y_MARGIN, offscreenSpawnX, wrapDelta, type ShipState } from './physics'
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export type EnemyType =
   | 'drifter'

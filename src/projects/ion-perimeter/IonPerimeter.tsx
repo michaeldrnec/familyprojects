@@ -35,7 +35,7 @@ import {
   type UpgradeFx,
 } from './towerArt'
 import { loadProgress, recordRun, isTowerUnlocked, isBranchUnlocked, type Progress } from './progress'
-import { makeRng, type Rng } from './rng'
+import { makeRng, type Rng } from '../../shared/rng'
 import { spawnExplosion, stepExplosions, type Explosion } from './explosions'
 import {
   fireProjectile,
@@ -47,6 +47,9 @@ import {
   type ChainFx,
 } from './projectiles'
 import * as audio from './audio'
+import { logicalPoint, scaledContext, useHiDpiCanvas } from '../../shared/hiDpiCanvas'
+import { useMuted } from '../../shared/audio'
+import { usePauseOnHide } from '../../shared/usePauseOnHide'
 import './IonPerimeter.css'
 
 type Phase = 'start' | 'playing' | 'paused' | 'wave-cleared' | 'game-over' | 'victory'
@@ -436,6 +439,7 @@ function buildSpawnQueue(waveDef: WaveDef, difficulty: Difficulty): { queue: Sch
 
 function IonPerimeter() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  useHiDpiCanvas(canvasRef, VIEW_WIDTH, VIEW_HEIGHT)
 
   const [phase, setPhase] = useState<Phase>('start')
   const [difficultyId, setDifficultyId] = useState<DifficultyId>(() => loadDifficulty())
@@ -446,7 +450,7 @@ function IonPerimeter() {
   const [score, setScore] = useState(0)
   const [selectedTowerType, setSelectedTowerType] = useState<TowerId | null>(null)
   const [selectedTowerId, setSelectedTowerId] = useState<number | null>(null)
-  const [muted, setMuted] = useState(audio.isMuted())
+  const [muted, toggleSiteMute] = useMuted()
   const [speed, setSpeed] = useState<1 | 2>(1)
   const [progress, setProgress] = useState<Progress>(() => loadProgress())
   const [isNewBest, setIsNewBest] = useState(false)
@@ -868,7 +872,7 @@ function IonPerimeter() {
   function draw() {
     const canvas = canvasRef.current
     if (!canvas) return
-    const ctx = canvas.getContext('2d')
+    const ctx = scaledContext(canvas)
     if (!ctx) return
     const t = worldTimeRef.current
 
@@ -936,11 +940,7 @@ function IonPerimeter() {
   function canvasPoint(e: { clientX: number; clientY: number }): Point {
     const canvas = canvasRef.current
     if (!canvas) return { x: 0, y: 0 }
-    const rect = canvas.getBoundingClientRect()
-    return {
-      x: ((e.clientX - rect.left) / rect.width) * canvas.width,
-      y: ((e.clientY - rect.top) / rect.height) * canvas.height,
-    }
+    return logicalPoint(e, canvas, VIEW_WIDTH, VIEW_HEIGHT)
   }
 
   function handleCanvasPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -1056,14 +1056,14 @@ function IonPerimeter() {
     else if (phase === 'paused') setPhase('playing')
   }
 
+  usePauseOnHide(() => setPhase('paused'), phase === 'playing')
+
   function handleSpeedToggle() {
     setSpeed((s) => (s === 1 ? 2 : 1))
   }
 
   function handleMuteToggle() {
-    const next = !muted
-    setMuted(next)
-    audio.setMuted(next)
+    toggleSiteMute()
   }
 
   function handleStartNextWave() {

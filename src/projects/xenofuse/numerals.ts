@@ -3,7 +3,7 @@
 // normal positional notation. The player converts the glyph string back to
 // the base-10 defuse code.
 import { GLYPHS } from './glyphs'
-import { shuffle, type Rng } from './rng'
+import { shuffle, type Rng } from '../../shared/rng'
 
 export interface NumeralPuzzle {
   kind: 'numerals'

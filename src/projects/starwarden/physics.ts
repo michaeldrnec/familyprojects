@@ -2,7 +2,7 @@
 // left/right set facing (not velocity), and a separate thrust key
 // accelerates the ship along its current facing direction with inertia --
 // releasing thrust decays velocity via drag rather than stopping instantly.
-import type { Rng } from './rng'
+import type { Rng } from '../../shared/rng'
 
 export const WORLD_WIDTH = 4000
 export const VIEW_WIDTH = 900

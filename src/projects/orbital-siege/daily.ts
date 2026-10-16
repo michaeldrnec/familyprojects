@@ -6,7 +6,7 @@
 // puzzle is too easy and the next sub-seed is tried.
 import { colTarget } from './defenses'
 import { LEVELS } from './levels'
-import { makeRng, type Rng } from './rng'
+import { makeRng, type Rng } from '../../shared/rng'
 import { planEnergy, simulate } from './sim'
 import { findWin } from './solver'
 import type { Action, Level, PdcPriority, StructureDef } from './types'

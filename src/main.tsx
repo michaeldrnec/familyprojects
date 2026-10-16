@@ -11,3 +11,13 @@ createRoot(document.getElementById('root')!).render(
     </BrowserRouter>
   </StrictMode>,
 )
+
+// Offline support (src/service-worker.js). Production only: in dev it would
+// cache stale modules and fight hot reloading.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // Unsupported or blocked -- the site still works, just not offline.
+    })
+  })
+}

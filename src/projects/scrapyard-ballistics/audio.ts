@@ -1,13 +1,13 @@
 // Synthesized SFX via the Web Audio API only -- no audio files, following
-// ion-perimeter/audio.ts: a lazy singleton AudioContext created from a
-// real user gesture (init()), and a masterGain node for mute. On top of
+// ion-perimeter/audio.ts: the shared site AudioContext, first used from a
+// real user gesture (init()), and its own output channel. On top of
 // the one-shot cues there's a continuous engine drone whose loudness and
 // grit follow the live thrust.
+import { createChannel, getAudioContext } from '../../shared/audio'
 import type { Cue } from './flight'
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
-let muted = false
 let droneGain: GainNode | null = null
 let droneFilter: BiquadFilterNode | null = null
 let droneOsc: OscillatorNode | null = null
@@ -21,22 +21,14 @@ function makeNoiseBuffer(context: AudioContext, seconds: number): AudioBuffer {
 
 export function init() {
   if (ctx) {
-    if (ctx.state === 'suspended') void ctx.resume()
+    getAudioContext() // resumes it if the browser suspended it
     return
   }
-  ctx = new AudioContext()
-  masterGain = ctx.createGain()
-  masterGain.gain.value = muted ? 0 : 0.8
-  masterGain.connect(ctx.destination)
-}
-
-export function setMuted(next: boolean) {
-  muted = next
-  if (masterGain && ctx) masterGain.gain.setTargetAtTime(muted ? 0 : 0.8, ctx.currentTime, 0.05)
-}
-
-export function isMuted() {
-  return muted
+  const shared = getAudioContext()
+  const out = createChannel(0.8)
+  if (!shared || !out) return
+  ctx = shared
+  masterGain = out
 }
 
 function envGain(context: AudioContext, destination: AudioNode, peak: number, attack: number, release: number) {
