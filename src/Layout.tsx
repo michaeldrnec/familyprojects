@@ -27,12 +27,14 @@ function Layout() {
   return (
     <>
       <header className="site-header">
-        <Link to="/" className="brand" aria-label="All games">
-          <img
-            src={isHome ? '/drnec_projects_logo.webp' : '/drnec_project_icon.webp'}
-            alt="Drnec Family A.I. Projects"
-            className="brand-logo"
-          />
+        {/* The full logo's stacked text is unreadable at header size, so the
+            header pairs just its icon with the name set as real text. */}
+        <Link to="/" className="brand" title="All games">
+          <img src="/drnec_project_icon.webp" alt="" className="brand-logo" />
+          <span className="brand-name">
+            <span className="brand-name-top">Drnec Family</span>
+            <span className="brand-name-bottom">A.I. Projects</span>
+          </span>
         </Link>
         {project?.headerLogo && (
           <>
