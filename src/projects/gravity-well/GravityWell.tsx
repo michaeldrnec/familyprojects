@@ -3,12 +3,15 @@ import {
   BEAM_HALF_ANGLE,
   BEAM_RANGE,
   MAX_TICKS,
+  STARDUST_RADIUS,
   TICK_DT,
   checkOutcome,
+  distance,
   effectivePosition,
   simulateTrajectory,
   stepRocket,
   surfaceDistance,
+  touchesStardust,
   velocityFromAngle,
   type Alien,
   type Body,
@@ -17,17 +20,32 @@ import {
 } from './physics'
 import { TIERS } from './levels'
 import { generateSolvableLevel, type Level } from './levelGen'
-import { scoreLanding, type LevelScore } from './scoring'
+import { LAUNCHES_PER_LEVEL, scoreLanding, type LevelScore } from './scoring'
+import { loadProgress, runTotal, saveRun, type SavedScore } from './progress'
 import * as audio from './audio'
 import { logicalPoint, scaledContext, useHiDpiCanvas } from '../../shared/hiDpiCanvas'
 import { useMuted } from '../../shared/audio'
+import { prefersReducedMotion } from '../../shared/motion'
 import './GravityWell.css'
 
-// Playback runs faster than real-time (a full simulated flight can be many
-// seconds of sim-time) so retries stay snappy rather than making the
-// player wait out a slow, realistic-speed flight every attempt.
-const TICKS_PER_FRAME = 6
+// Playback runs a bit faster than real-time (a typical landing is about 3s
+// of sim-time, so ~2s on screen): snappy enough for retries, slow enough to
+// time a mid-flight boost. Time-based, so a 120Hz screen doesn't play
+// flights twice as fast.
+const PLAYBACK_SPEED = 1.5
+const TICKS_PER_SECOND = PLAYBACK_SPEED / TICK_DT
 const CRASH_PAUSE_MS = 900
+const OUT_OF_LAUNCHES_PAUSE_MS = 1800
+// The aiming preview shows only the start of the path -- how the shot
+// leaves the pad and begins to bend -- never the whole route, and it always
+// stops well short of Earth, so the player still has to read the gravity.
+const PREVIEW_LENGTH = 180
+const PREVIEW_EARTH_CLEARANCE = 70
+// The once-per-flight boost: a short push along the direction of travel.
+const BOOST_ACCEL = 260 // px/s^2
+const BOOST_SECONDS = 0.4 // sim-time
+// Speed (px/s) at which the engine sound is at its loudest and brightest.
+const ENGINE_FULL_SPEED = 450
 // Same cap simulateTrajectory uses -- a safety net so a flight can't run
 // forever if something (most plausibly the alien's tractor beam) drains the
 // rocket's velocity to a near-standstill with nothing else around to
@@ -48,6 +66,13 @@ const DRAG_MAX_PX = 260
 const MIN_DRAG_PX = 30
 
 type Phase = 'aiming' | 'flying' | 'crashed' | 'won'
+
+interface Boost {
+  used: boolean
+  remaining: number // sim-seconds of thrust left while burning
+}
+
+const newSeed = () => Math.floor(Math.random() * 1_000_000_000)
 
 // A fixed starfield per level size, generated once (not re-randomized every
 // render) purely for background flavor.
@@ -326,22 +351,65 @@ function drawAlien(ctx: CanvasRenderingContext2D, alien: Alien) {
   ctx.restore()
 }
 
+// A four-pointed sparkle for an uncollected bit of stardust (a faint ring
+// once collected), gently twinkling unless the player prefers less motion.
+function drawStardust(ctx: CanvasRenderingContext2D, pos: Vec2, collected: boolean, t: number, still: boolean) {
+  ctx.save()
+  ctx.translate(pos.x, pos.y)
+  if (collected) {
+    ctx.strokeStyle = 'rgba(253, 230, 138, 0.25)'
+    ctx.lineWidth = 1
+    ctx.beginPath()
+    ctx.arc(0, 0, STARDUST_RADIUS * 0.6, 0, Math.PI * 2)
+    ctx.stroke()
+    ctx.restore()
+    return
+  }
+  const twinkle = still ? 1 : 0.85 + 0.15 * Math.sin(t * 5 + pos.x)
+  const r = STARDUST_RADIUS * twinkle
+  ctx.shadowColor = 'rgba(253, 224, 71, 0.9)'
+  ctx.shadowBlur = 12
+  ctx.fillStyle = '#fde68a'
+  ctx.beginPath()
+  for (let i = 0; i < 8; i++) {
+    const a = (i * Math.PI) / 4 - Math.PI / 2
+    const len = i % 2 === 0 ? r : r * 0.35
+    ctx.lineTo(Math.cos(a) * len, Math.sin(a) * len)
+  }
+  ctx.closePath()
+  ctx.fill()
+  ctx.restore()
+}
+
 function GravityWell() {
-  const [levelIndex, setLevelIndex] = useState(0)
-  const [runSeed, setRunSeed] = useState(() => Math.floor(Math.random() * 1_000_000_000))
+  // The saved run (if any) is resumed exactly: same seed, level, layout and
+  // launches used, so reloading the page is never a way to refill launches.
+  const [saved] = useState(() => loadProgress())
+  const [levelIndex, setLevelIndex] = useState(saved.run?.levelIndex ?? 0)
+  const [runSeed, setRunSeed] = useState(() => saved.run?.seed ?? newSeed())
+  // A run saved just after its final launch crashed resumes on the fresh
+  // layout it was about to get.
+  const [resumedOut] = useState(() => (saved.run?.launchesUsed ?? 0) >= LAUNCHES_PER_LEVEL)
+  const [layout, setLayout] = useState((saved.run?.layout ?? 0) + (resumedOut ? 1 : 0))
+  const [launchesUsed, setLaunchesUsed] = useState(resumedOut ? 0 : (saved.run?.launchesUsed ?? 0))
+  const [bestTotal, setBestTotal] = useState(saved.bestTotal)
   const [level, setLevel] = useState<Level | null>(null)
   const [phase, setPhase] = useState<Phase>('aiming')
+  const [outOfLaunches, setOutOfLaunches] = useState(false)
   const [angle, setAngle] = useState(DEFAULT_ANGLE)
   const [power, setPower] = useState(DEFAULT_POWER)
-  const [showPreview, setShowPreview] = useState(true)
-  // Best score recorded per level so far (null = not yet landed). Retrying
+  // Best result recorded per level so far (null = not yet landed). Retrying
   // an already-passed level can only ever improve this -- a worse attempt
   // just doesn't overwrite the kept best.
-  const [levelScores, setLevelScores] = useState<(LevelScore | null)[]>(() =>
-    TIERS.map(() => null),
+  const [levelScores, setLevelScores] = useState<(SavedScore | null)[]>(
+    () => saved.run?.scores ?? TIERS.map(() => null),
   )
   const [lastResult, setLastResult] = useState<LevelScore | null>(null)
   const [isNewBest, setIsNewBest] = useState(false)
+  // Re-rendered only when these change mid-flight (a pickup, the boost
+  // gauge), not every frame.
+  const [stardustCollected, setStardustCollected] = useState(0)
+  const [boostLeft, setBoostLeft] = useState(1)
   // The canvas's actual on-screen width (it's height-constrained and
   // centered, so it's rarely the full page width) -- tracked so the
   // progress row above it can match that width and right-align flush with
@@ -349,13 +417,20 @@ function GravityWell() {
   const [canvasWidth, setCanvasWidth] = useState<number | null>(null)
   const [muted, toggleSiteMute] = useMuted()
 
-  const totalScore = levelScores.reduce((sum, s) => sum + (s?.total ?? 0), 0)
+  const totalScore = runTotal(levelScores)
+  const totalStars = levelScores.reduce((sum, s) => sum + (s?.stars ?? 0), 0)
   const finished = levelIndex >= TIERS.length
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   useHiDpiCanvas(canvasRef, level?.bounds.width ?? 0, level?.bounds.height ?? 0, { capToLogical: true })
   const rocketRef = useRef<RocketState>({ pos: { x: 0, y: 0 }, vel: { x: 0, y: 0 } })
   const trailRef = useRef<Vec2[]>([])
+  // The previous flight on this layout, drawn faintly while aiming so each
+  // attempt can learn from the last one.
+  const ghostTrailRef = useRef<Vec2[]>([])
+  const collectedRef = useRef<Set<number>>(new Set())
+  const boostRef = useRef<Boost>({ used: false, remaining: 0 })
+  const crashTimerRef = useRef<number | null>(null)
   const rafRef = useRef<number | null>(null)
   // Closest surface distance the rocket ever got to each of the level's
   // bodies during the current flight, used to score "gravity well escaped"
@@ -392,7 +467,7 @@ function GravityWell() {
   useEffect(() => {
     if (finished) return
     const tier = TIERS[levelIndex]
-    const cacheKey = `${runSeed}:${levelIndex}`
+    const cacheKey = `${runSeed}:${levelIndex}:${layout}`
     const cached = levelCacheRef.current.get(cacheKey)
     if (cached) {
       applyNewLevel(cached)
@@ -400,7 +475,7 @@ function GravityWell() {
     }
     setLevel(null)
     const timer = window.setTimeout(() => {
-      const generated = generateSolvableLevel(tier, runSeed + levelIndex * 7919)
+      const generated = generateSolvableLevel(tier, runSeed + levelIndex * 7919 + layout * 104_729)
       levelCacheRef.current.set(cacheKey, generated)
       applyNewLevel(generated)
     }, 20)
@@ -409,12 +484,23 @@ function GravityWell() {
     function applyNewLevel(lvl: Level) {
       rocketRef.current = { pos: { ...lvl.rocketStart }, vel: { x: 0, y: 0 } }
       trailRef.current = []
+      ghostTrailRef.current = []
+      collectedRef.current = new Set()
+      setStardustCollected(0)
       starsRef.current = makeStars(lvl.bounds.width, lvl.bounds.height, 80)
+      setOutOfLaunches(false)
       setPhase('aiming')
       setLevel(lvl)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [levelIndex, runSeed, finished])
+  }, [levelIndex, runSeed, layout, finished])
+
+  // Save the run whenever it moves on: a landing, a launch, a new layout or
+  // a new level.
+  useEffect(() => {
+    const progress = saveRun({ seed: runSeed, levelIndex, layout, launchesUsed, scores: levelScores })
+    setBestTotal(progress.bestTotal)
+  }, [runSeed, levelIndex, layout, launchesUsed, levelScores])
 
   function draw() {
     const canvas = canvasRef.current
@@ -437,10 +523,25 @@ function GravityWell() {
 
     if (level.alien) drawAlien(ctx, level.alien)
 
+    const still = prefersReducedMotion()
+    level.stardust.forEach((sd, i) =>
+      drawStardust(ctx, sd, phase !== 'aiming' && collectedRef.current.has(i), t, still),
+    )
+
+    // The last flight on this layout, faint, so the next shot can adjust.
+    if (phase === 'aiming' && ghostTrailRef.current.length > 1) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)'
+      ctx.lineWidth = 1.5
+      ctx.beginPath()
+      ghostTrailRef.current.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
+      ctx.stroke()
+    }
+
     // Trajectory preview -- recomputed every frame off the current angle,
     // power, and the bodies' current orbital phase, so it never lies about
-    // "if I launched right now."
-    if (phase === 'aiming' && showPreview) {
+    // "if I launched right now". Only the first PREVIEW_LENGTH px are shown,
+    // fading out, and never the approach to Earth.
+    if (phase === 'aiming') {
       const vel = velocityFromAngle(angle, power)
       const preview = simulateTrajectory(
         level.rocketStart,
@@ -448,18 +549,30 @@ function GravityWell() {
         level.bodies,
         level.earth,
         level.bounds,
-        4,
+        2,
         t,
-        undefined,
+        600,
         level.alien,
       )
       ctx.setLineDash([5, 6])
-      ctx.strokeStyle = 'rgba(96, 165, 250, 0.8)'
       ctx.lineWidth = 2
-      ctx.beginPath()
-      preview.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)))
-      ctx.stroke()
+      let travelled = 0
+      for (let i = 1; i < preview.points.length; i++) {
+        const a = preview.points[i - 1]
+        const b = preview.points[i]
+        if (distance(b, level.earth) < level.earth.radius + PREVIEW_EARTH_CLEARANCE) break
+        const step = distance(a, b)
+        if (travelled + step > PREVIEW_LENGTH) break
+        ctx.lineDashOffset = -travelled
+        ctx.strokeStyle = `rgba(96, 165, 250, ${0.95 - 0.7 * (travelled / PREVIEW_LENGTH)})`
+        ctx.beginPath()
+        ctx.moveTo(a.x, a.y)
+        ctx.lineTo(b.x, b.y)
+        ctx.stroke()
+        travelled += step
+      }
       ctx.setLineDash([])
+      ctx.lineDashOffset = 0
     }
 
     // Flight trail
@@ -482,10 +595,20 @@ function GravityWell() {
     ctx.rotate(heading)
     ctx.scale(0.55, 0.55)
     const bodyColor = phase === 'crashed' ? '#f87171' : '#e5e7eb'
-    // flame
+    // flame -- a long, bright plume while the boost burns
+    const boosting = phase === 'flying' && boostRef.current.remaining > 0
+    if (boosting) {
+      ctx.beginPath()
+      ctx.moveTo(-6, 13)
+      ctx.lineTo(0, 40 + (still ? 0 : Math.random() * 8))
+      ctx.lineTo(6, 13)
+      ctx.closePath()
+      ctx.fillStyle = 'rgba(251, 146, 60, 0.85)'
+      ctx.fill()
+    }
     ctx.beginPath()
     ctx.moveTo(-4, 14)
-    ctx.lineTo(0, 22)
+    ctx.lineTo(0, boosting ? 28 : 22)
     ctx.lineTo(4, 14)
     ctx.closePath()
     ctx.fillStyle = '#fbbf24'
@@ -580,7 +703,19 @@ function GravityWell() {
   useEffect(() => {
     return () => {
       if (rafRef.current !== null) cancelAnimationFrame(rafRef.current)
+      if (crashTimerRef.current !== null) window.clearTimeout(crashTimerRef.current)
+      audio.stopEngine(true)
     }
+  }, [])
+
+  // A hidden tab stops drawing frames, which freezes the flight -- so the
+  // engine shouldn't keep roaring in the background.
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.hidden) audio.stopEngine(true)
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [])
 
   // Track the canvas's real rendered width (it's height-constrained and
@@ -598,11 +733,25 @@ function GravityWell() {
     return () => observer.disconnect()
   }, [level])
 
-  // Keyboard aiming: A/D adjust angle, W/S adjust power -- a precise
-  // fallback alongside the drag-to-launch control. Only while aiming.
+  // The key handler below is bound once per phase, so it reaches launch()
+  // and boost() through a ref that always holds this render's versions.
+  const actionsRef = useRef({ launch, boost })
+  actionsRef.current = { launch, boost }
+
+  // Keyboard: A/D adjust angle, W/S adjust power -- a precise fallback
+  // alongside the drag-to-launch control -- and Space launches, then boosts
+  // mid-flight.
   useEffect(() => {
-    if (phase !== 'aiming') return
+    if (phase !== 'aiming' && phase !== 'flying') return
     function onKeyDown(e: KeyboardEvent) {
+      if (e.key === ' ') {
+        e.preventDefault()
+        if (e.repeat) return
+        if (phase === 'aiming') actionsRef.current.launch()
+        else actionsRef.current.boost()
+        return
+      }
+      if (phase !== 'aiming') return
       switch (e.key.toLowerCase()) {
         case 'a':
           setAngle((a) => (a - ANGLE_STEP + (ANGLE_MAX + 1)) % (ANGLE_MAX + 1))
@@ -646,6 +795,10 @@ function GravityWell() {
   }
 
   function handlePointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (phase === 'flying') {
+      boost()
+      return
+    }
     if (!level || phase !== 'aiming') return
     e.currentTarget.setPointerCapture(e.pointerId)
     isDraggingRef.current = true
@@ -682,65 +835,121 @@ function GravityWell() {
   }
 
   function launch() {
-    if (!level || phase !== 'aiming') return
+    if (!level || phase !== 'aiming' || launchesUsed >= LAUNCHES_PER_LEVEL) return
     audio.init()
-    audio.playLaunch()
+    audio.startEngine()
     const activeLevel = level
+    const used = launchesUsed + 1
+    setLaunchesUsed(used)
     const vel = velocityFromAngle(angle, power)
     const startWorldTime = worldTimeRef.current
     rocketRef.current = { pos: { ...activeLevel.rocketStart }, vel }
     trailRef.current = [{ ...activeLevel.rocketStart }]
     closestApproachRef.current = activeLevel.bodies.map(() => Infinity)
+    collectedRef.current = new Set()
+    setStardustCollected(0)
+    boostRef.current = { used: false, remaining: 0 }
+    setBoostLeft(1)
     let flightElapsed = 0
+    let ticksOwed = 0
+    let last = performance.now()
     setPhase('flying')
 
-    function frame() {
-      for (let i = 0; i < TICKS_PER_FRAME; i++) {
+    function frame(now: number) {
+      ticksOwed += (Math.min(now - last, 50) / 1000) * TICKS_PER_SECOND
+      last = now
+      while (ticksOwed >= 1) {
+        ticksOwed -= 1
         flightElapsed += TICK_DT
         const t = startWorldTime + flightElapsed
-        rocketRef.current = stepRocket(rocketRef.current, activeLevel.bodies, TICK_DT, t, activeLevel.alien)
+        const boostState = boostRef.current
+        const thrust = boostState.remaining > 0 ? BOOST_ACCEL : 0
+        boostState.remaining = Math.max(0, boostState.remaining - TICK_DT)
+        rocketRef.current = stepRocket(rocketRef.current, activeLevel.bodies, TICK_DT, t, activeLevel.alien, thrust)
         clockRef.current = t
         trailRef.current.push(rocketRef.current.pos)
         activeLevel.bodies.forEach((body, bi) => {
           const d = surfaceDistance(rocketRef.current.pos, body, t)
           if (d < closestApproachRef.current[bi]) closestApproachRef.current[bi] = d
         })
+        activeLevel.stardust.forEach((sd, si) => {
+          if (collectedRef.current.has(si) || !touchesStardust(rocketRef.current.pos, sd)) return
+          collectedRef.current.add(si)
+          setStardustCollected(collectedRef.current.size)
+          audio.playStardust()
+        })
         const outcome = checkOutcome(rocketRef.current.pos, activeLevel.bodies, activeLevel.earth, activeLevel.bounds, t)
         const strandedTimeout = flightElapsed >= MAX_FLIGHT_SECONDS
         if (outcome !== 'flying' || strandedTimeout) {
+          ghostTrailRef.current = trailRef.current
           drawRef.current()
           if (outcome === 'hit-earth') {
+            audio.stopEngine()
             audio.playWin()
-            const result = scoreLanding(activeLevel.bodies, closestApproachRef.current)
+            const result = scoreLanding(activeLevel.bodies, closestApproachRef.current, {
+              stardustCollected: collectedRef.current.size,
+              stardustTotal: activeLevel.stardust.length,
+              launchesUsed: used,
+            })
             const existingBest = levelScores[levelIndex]
-            const newBest = !existingBest || result.total > existingBest.total
             setLastResult(result)
-            setIsNewBest(newBest)
-            if (newBest) {
-              setLevelScores((prev) => {
-                const next = [...prev]
-                next[levelIndex] = result
-                return next
-              })
-            }
+            setIsNewBest(!existingBest || result.total > existingBest.total)
+            setLevelScores((prev) => {
+              const next = [...prev]
+              const best = prev[levelIndex]
+              next[levelIndex] = {
+                total: Math.max(best?.total ?? 0, result.total),
+                stars: Math.max(best?.stars ?? 0, result.stars),
+              }
+              return next
+            })
             setPhase('won')
           } else {
+            audio.stopEngine(true)
             audio.playCrash()
+            const out = used >= LAUNCHES_PER_LEVEL
+            setOutOfLaunches(out)
             setPhase('crashed')
-            setTimeout(resetAim, CRASH_PAUSE_MS)
+            crashTimerRef.current = window.setTimeout(
+              () => {
+                crashTimerRef.current = null
+                if (!out) {
+                  resetAim()
+                  return
+                }
+                // Out of launches: a fresh layout of the same level.
+                setLaunchesUsed(0)
+                setLayout((l) => l + 1)
+              },
+              out ? OUT_OF_LAUNCHES_PAUSE_MS : CRASH_PAUSE_MS,
+            )
           }
           return
         }
       }
+      const { used: boostUsed, remaining } = boostRef.current
+      setBoostLeft(boostUsed ? remaining / BOOST_SECONDS : 1)
+      const { x: vx, y: vy } = rocketRef.current.vel
+      audio.updateEngine(Math.hypot(vx, vy) / ENGINE_FULL_SPEED, remaining > 0)
       drawRef.current()
       rafRef.current = requestAnimationFrame(frame)
     }
     rafRef.current = requestAnimationFrame(frame)
   }
 
+  // The once-per-flight boost (Space, a tap on the canvas, or the Boost
+  // button): a short push along the direction of travel.
+  function boost() {
+    if (phaseRef.current !== 'flying' || boostRef.current.used) return
+    boostRef.current = { used: true, remaining: BOOST_SECONDS }
+    audio.playBoost()
+  }
+
   function nextLevel() {
     audio.playClick()
     setLevelIndex((i) => i + 1)
+    setLayout(0)
+    setLaunchesUsed(0)
     setAngle(DEFAULT_ANGLE)
     setPower(DEFAULT_POWER)
     setLastResult(null)
@@ -749,11 +958,13 @@ function GravityWell() {
   // Replay the level just won, for a shot at a better score -- keeps the
   // best score already recorded for it (only a strictly better attempt
   // will ever replace it), keeps the current angle/power, and reuses the
-  // exact same generated layout (see the level-cache effect above).
+  // exact same generated layout (see the level-cache effect above) with a
+  // full set of launches.
   function retryLevel() {
     audio.playClick()
     if (level) rocketRef.current = { pos: { ...level.rocketStart }, vel: { x: 0, y: 0 } }
     trailRef.current = []
+    setLaunchesUsed(0)
     setLastResult(null)
     setPhase('aiming')
   }
@@ -761,7 +972,9 @@ function GravityWell() {
   function restart() {
     audio.playClick()
     setLevelIndex(0)
-    setRunSeed(Math.floor(Math.random() * 1_000_000_000))
+    setRunSeed(newSeed())
+    setLayout(0)
+    setLaunchesUsed(0)
     setAngle(DEFAULT_ANGLE)
     setPower(DEFAULT_POWER)
     setLastResult(null)
@@ -784,12 +997,30 @@ function GravityWell() {
         <div className="results">
           <p className="score">🎉 You made it home through all {TIERS.length} levels!</p>
           <p className="stat-line">Final score: {totalScore}</p>
+          <p className="stat-line">
+            {'★'.repeat(totalStars)} {totalStars} of {TIERS.length * 3} stars · best run {bestTotal}
+          </p>
           <button type="button" onClick={restart}>Play Again</button>
         </div>
       ) : (
         <>
           <div className="progress" style={canvasWidth ? { width: canvasWidth } : undefined}>
             <span className="score-badge">Score: {totalScore}</span>
+            <span className="flight-badges">
+              <span
+                className="launches-badge"
+                aria-label={`${LAUNCHES_PER_LEVEL - launchesUsed} of ${LAUNCHES_PER_LEVEL} launches left`}
+              >
+                {Array.from({ length: LAUNCHES_PER_LEVEL }, (_, i) => (
+                  <span key={i} className={i < LAUNCHES_PER_LEVEL - launchesUsed ? 'pip on' : 'pip'} />
+                ))}
+              </span>
+              {level && level.stardust.length > 0 && (
+                <span className="stardust-badge" aria-label="Stardust collected">
+                  ✦ {stardustCollected}/{level.stardust.length}
+                </span>
+              )}
+            </span>
             <span className="level-badge">Level {levelIndex + 1} of {TIERS.length}</span>
           </div>
 
@@ -820,6 +1051,14 @@ function GravityWell() {
                         🎉 Landed safely! +{lastResult.total}
                         {isNewBest && <span className="new-best"> New best!</span>}
                       </span>
+                      <span className="win-stars" aria-label={`${lastResult.stars} of 3 stars`}>
+                        {[1, 2, 3].map((n) => (
+                          <span key={n} className={n <= lastResult.stars ? 'on' : ''}>★</span>
+                        ))}
+                      </span>
+                      <span className="win-star-key">
+                        ★ landed · ★ all stardust · ★ within 2 launches
+                      </span>
                       <span className="win-breakdown">
                         {lastResult.landingScore} for landing
                         {lastResult.bonuses.map((b, i) => (
@@ -839,12 +1078,17 @@ function GravityWell() {
                   </div>
                 )}
                 {phase === 'crashed' && (
-                  <div className="feedback bad overlay">💥 Lost contact — resetting…</div>
+                  <div className="feedback bad overlay">
+                    {outOfLaunches
+                      ? '💥 Out of launches — charting a new course…'
+                      : `💥 Lost contact — ${LAUNCHES_PER_LEVEL - launchesUsed} ${LAUNCHES_PER_LEVEL - launchesUsed === 1 ? 'launch' : 'launches'} left`}
+                  </div>
                 )}
               </div>
 
               <p className="keyboard-hint">
-                Drag on the canvas like a slingshot to aim &amp; launch — or use A/D/W/S then Launch.
+                Drag on the canvas like a slingshot to aim &amp; launch — or use A/D/W/S then Space. Mid-flight,
+                tap or press Space once to boost. Grab the ✦ stardust on the way home.
               </p>
 
               <div className="controls">
@@ -852,22 +1096,30 @@ function GravityWell() {
                   <span>Angle: {angle}°</span>
                   <span>Power: {power}</span>
                 </div>
-                <label className="control checkbox">
-                  <input
-                    type="checkbox"
-                    checked={showPreview}
-                    onChange={(e) => setShowPreview(e.target.checked)}
-                  />
-                  <span>Show trajectory preview</span>
-                </label>
-                <button
-                  type="button"
-                  className="launch-button"
-                  onClick={launch}
-                  disabled={phase !== 'aiming'}
-                >
-                  Launch
-                </button>
+                {/* Separate elements (keys) so a Space press that launches
+                    can't also click the Boost button that replaces Launch. */}
+                {phase === 'flying' ? (
+                  <button
+                    key="boost"
+                    type="button"
+                    className="launch-button boost-button"
+                    onClick={boost}
+                    disabled={boostLeft < 1}
+                    style={{ '--fuel': boostLeft } as React.CSSProperties}
+                  >
+                    {boostLeft < 1 ? (boostLeft > 0 ? 'Boosting!' : 'Boost used') : 'Boost'}
+                  </button>
+                ) : (
+                  <button
+                    key="launch"
+                    type="button"
+                    className="launch-button"
+                    onClick={launch}
+                    disabled={phase !== 'aiming'}
+                  >
+                    Launch
+                  </button>
+                )}
               </div>
             </>
           )}

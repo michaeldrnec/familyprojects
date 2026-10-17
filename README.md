@@ -41,8 +41,10 @@ Grouped the way the homepage's filter groups them.
 ### Space Arcade
 
 - **Gravity Well** (`/gravity-well`): aim and launch your rocket home to Earth, bending its path
-  around asteroids, planets and stars. Levels are generated for each playthrough and get harder by
-  tier.
+  around asteroids, planets and stars. The preview only shows the start of each shot, you get five
+  launches per layout and one mid-flight boost per launch, and stardust along a daring route earns
+  up to three stars a level. Levels are generated for each playthrough and get harder across 30
+  tiers; the run is saved.
 - **Starwarden** (`/starwarden`): a Defender-style side-scrolling shooter in a looping warzone.
   Last as long as your fuel and power crystals hold out.
 - **Solar Ward** (`/solar-ward`): Missile Command meets Galaga. Swing an orbiting turret around a

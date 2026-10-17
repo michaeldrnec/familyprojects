@@ -3,6 +3,15 @@ import type { Body, BodyKind } from './physics'
 /** Points awarded just for landing safely, regardless of route taken. */
 export const LANDING_SCORE = 100
 
+/** Launches the player gets per layout; running out brings a fresh layout
+ * of the same level. */
+export const LAUNCHES_PER_LEVEL = 5
+const STARDUST_POINTS = 25
+const SPARE_LAUNCH_POINTS = 20
+/** Landing within this many launches earns the level's "sharp shooting"
+ * star. */
+const QUICK_LANDING_LAUNCHES = 2
+
 /** Ceiling on the "escaped its gravity well" bonus per body kind -- bigger,
  * more massive bodies are riskier to fly close to, so they're worth more. */
 const MAX_ESCAPE_BONUS: Record<BodyKind, number> = {
@@ -37,26 +46,44 @@ export function escapeBonusFor(body: Body, closestSurfaceDist: number): number {
   return Math.round(MAX_ESCAPE_BONUS[body.kind] * proximity)
 }
 
-export interface EscapeBonus {
-  kind: BodyKind
+export interface Bonus {
   label: string
   points: number
 }
 
 export interface LevelScore {
   landingScore: number
-  bonuses: EscapeBonus[]
+  bonuses: Bonus[]
   total: number
+  /** 1-3: one for landing, one for collecting every bit of stardust on the
+   * way, one for landing within QUICK_LANDING_LAUNCHES launches. */
+  stars: number
+}
+
+export interface FlightExtras {
+  stardustCollected: number
+  stardustTotal: number
+  /** Launches used on this layout, including the landing one. */
+  launchesUsed: number
 }
 
 /** Full score breakdown for a successful landing, given the closest
  * surface distance ever reached to each of the level's bodies. */
-export function scoreLanding(bodies: Body[], closestSurfaceDistances: number[]): LevelScore {
-  const bonuses: EscapeBonus[] = []
+export function scoreLanding(bodies: Body[], closestSurfaceDistances: number[], extras: FlightExtras): LevelScore {
+  const bonuses: Bonus[] = []
   bodies.forEach((body, i) => {
     const points = escapeBonusFor(body, closestSurfaceDistances[i] ?? Infinity)
-    if (points > 0) bonuses.push({ kind: body.kind, label: BODY_LABELS[body.kind], points })
+    if (points > 0) bonuses.push({ label: BODY_LABELS[body.kind], points })
   })
+  if (extras.stardustCollected > 0) {
+    bonuses.push({ label: `Stardust ×${extras.stardustCollected}`, points: extras.stardustCollected * STARDUST_POINTS })
+  }
+  const spare = Math.max(0, LAUNCHES_PER_LEVEL - extras.launchesUsed)
+  if (spare > 0) bonuses.push({ label: `Launches to spare ×${spare}`, points: spare * SPARE_LAUNCH_POINTS })
   const bonusTotal = bonuses.reduce((sum, b) => sum + b.points, 0)
-  return { landingScore: LANDING_SCORE, bonuses, total: LANDING_SCORE + bonusTotal }
+  const stars =
+    1 +
+    (extras.stardustCollected >= extras.stardustTotal ? 1 : 0) +
+    (extras.launchesUsed <= QUICK_LANDING_LAUNCHES ? 1 : 0)
+  return { landingScore: LANDING_SCORE, bonuses, total: LANDING_SCORE + bonusTotal, stars }
 }

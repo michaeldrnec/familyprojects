@@ -48,6 +48,34 @@
   font-size: 13px;
 }
 
+.gravity-well .flight-badges {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  opacity: 1;
+}
+
+.gravity-well .launches-badge {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.gravity-well .pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1px solid var(--accent);
+}
+
+.gravity-well .pip.on {
+  background: var(--accent);
+}
+
+.gravity-well .stardust-badge {
+  color: #fde68a;
+  font-weight: 700;
+}
+
 .gravity-well .game-area {
   position: relative;
   flex: 1;
@@ -186,6 +214,22 @@
   opacity: 0.85;
 }
 
+.gravity-well .win-stars {
+  font-size: 26px;
+  letter-spacing: 4px;
+  color: rgba(255, 255, 255, 0.2);
+}
+
+.gravity-well .win-stars .on {
+  color: #fde047;
+  text-shadow: 0 0 10px rgba(253, 224, 71, 0.6);
+}
+
+.gravity-well .win-star-key {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
 .gravity-well .feedback {
   max-width: 800px;
   margin: 0 auto;
@@ -230,12 +274,6 @@
   color: var(--text-h);
 }
 
-.gravity-well .control.checkbox {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  min-width: auto;
-}
 
 .gravity-well .launch-button {
   padding: 10px 28px;
@@ -250,6 +288,22 @@
 .gravity-well .launch-button:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+/* The fill drains as the boost burns (--fuel: 1 full, 0 spent). */
+.gravity-well .boost-button {
+  min-width: 132px;
+  border-color: #fb923c;
+  color: #fed7aa;
+  background: linear-gradient(
+    to right,
+    rgba(251, 146, 60, 0.35) calc(var(--fuel, 1) * 100%),
+    transparent calc(var(--fuel, 1) * 100%)
+  );
+}
+
+.gravity-well .boost-button:disabled {
+  opacity: 0.6;
 }
 
 .gravity-well .results {
@@ -283,4 +337,16 @@
   color: var(--accent);
   font-weight: 700;
   cursor: pointer;
+}
+
+/* At phone width the progress row runs the full width, where this button
+ * would cover the level count; the site header's mute button covers it. */
+@media (max-width: 520px) {
+  .gravity-well .gw-mute {
+    display: none;
+  }
+
+  .gravity-well .flight-badges {
+    gap: 8px;
+  }
 }

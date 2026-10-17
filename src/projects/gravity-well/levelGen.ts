@@ -1,7 +1,8 @@
-import type { Alien, Body, BodyKind } from './physics'
-import { simulateTrajectory, velocityFromAngle } from './physics'
+import type { Alien, Body, BodyKind, Vec2 } from './physics'
+import { TICK_DT, distance, simulateTrajectory, surfaceDistance, velocityFromAngle } from './physics'
 import { makeRng, type Rng } from '../../shared/rng'
 import type { TierConfig } from './levels'
+import { escapeBonusFor } from './scoring'
 
 export interface Level {
   name: string
@@ -10,6 +11,8 @@ export interface Level {
   earth: { x: number; y: number; radius: number }
   bodies: Body[]
   alien?: Alien
+  /** Pickups along one landing route (see placeStardust). */
+  stardust: Vec2[]
 }
 
 // Same power range the UI's drag/keyboard controls expose -- the
@@ -21,6 +24,13 @@ const SEARCH_ANGLE_STEP = 9
 const SEARCH_POWER_STEPS = 14
 const SEARCH_MAX_TICKS = 1500 // 12.5s of simulated flight -- plenty for the tuned power range
 const MAX_GENERATION_ATTEMPTS = 40
+
+const STARDUST_COUNT = 3
+// Keeps pickups clear of the launch pad and of Earth, and apart from each
+// other, so each one is its own small target.
+const STARDUST_START_CLEARANCE = 70
+const STARDUST_EARTH_CLEARANCE = 45
+const STARDUST_MIN_SPACING = 60
 
 const EDGE_MARGIN = 70
 const START_EARTH_X_MARGIN = 60
@@ -143,18 +153,20 @@ export function generateLevel(tier: TierConfig, seed: number): Level {
     alien = { x: spot.x, y: spot.y, beamAngle: Math.atan2(earth.y - spot.y, earth.x - spot.x) }
   }
 
-  return { name: tier.name, bounds, rocketStart, earth, bodies, alien }
+  return { name: tier.name, bounds, rocketStart, earth, bodies, alien, stardust: [] }
 }
 
 /** Coarse angle/power grid search reusing the exact physics the real flight
- * and the live preview use -- a level only counts as solvable if a shot
- * within the player's actual control range (SEARCH_POWER_MIN..MAX) reaches
- * Earth. */
-export function isSolvable(level: Level): boolean {
+ * and the live preview use -- a shot only counts if it's within the
+ * player's actual control range (SEARCH_POWER_MIN..MAX, whole-number powers
+ * like the controls produce) and reaches Earth. Returns the landing
+ * velocities found, or just the first one with `firstOnly`. */
+function landingShots(level: Level, firstOnly: boolean): Vec2[] {
+  const shots: Vec2[] = []
   const powerStep = (SEARCH_POWER_MAX - SEARCH_POWER_MIN) / SEARCH_POWER_STEPS
   for (let angle = 0; angle < 360; angle += SEARCH_ANGLE_STEP) {
     for (let p = 0; p <= SEARCH_POWER_STEPS; p++) {
-      const power = SEARCH_POWER_MIN + p * powerStep
+      const power = Math.round(SEARCH_POWER_MIN + p * powerStep)
       const vel = velocityFromAngle(angle, power)
       const result = simulateTrajectory(
         level.rocketStart,
@@ -167,10 +179,65 @@ export function isSolvable(level: Level): boolean {
         SEARCH_MAX_TICKS,
         level.alien,
       )
-      if (result.outcome === 'hit-earth') return true
+      if (result.outcome === 'hit-earth') {
+        shots.push(vel)
+        if (firstOnly) return shots
+      }
     }
   }
-  return false
+  return shots
+}
+
+export function isSolvable(level: Level): boolean {
+  return landingShots(level, true).length > 0
+}
+
+/** Lays stardust along the riskiest landing route the search found -- the
+ * one that skims closest to the level's bodies (the same measure the
+ * flyby bonuses score) -- so collecting it all means flying a daring line,
+ * and the pickups double as a breadcrumb hint toward a working shot.
+ * Routes are traced from t=0, so on levels with orbiting bodies the line
+ * through every pickup depends on when you launch. */
+function placeStardust(level: Level): Vec2[] {
+  let bestRoute: Vec2[] = []
+  let bestRisk = -1
+  for (const vel of landingShots(level, false)) {
+    const { points } = simulateTrajectory(
+      level.rocketStart,
+      vel,
+      level.bodies,
+      level.earth,
+      level.bounds,
+      1,
+      0,
+      SEARCH_MAX_TICKS,
+      level.alien,
+    )
+    const risk = level.bodies.reduce((sum, body) => {
+      let closest = Infinity
+      points.forEach((pt, i) => (closest = Math.min(closest, surfaceDistance(pt, body, i * TICK_DT))))
+      return sum + escapeBonusFor(body, closest)
+    }, 0)
+    if (risk > bestRisk) {
+      bestRisk = risk
+      bestRoute = points
+    }
+  }
+
+  const usable = bestRoute.filter(
+    (pt) =>
+      distance(pt, level.rocketStart) >= STARDUST_START_CLEARANCE &&
+      distance(pt, level.earth) >= level.earth.radius + STARDUST_EARTH_CLEARANCE,
+  )
+  if (usable.length === 0) return []
+  // Evenly spaced along the usable stretch, dropping any that would crowd
+  // the previous one (a short route may only fit one or two).
+  const picks: Vec2[] = []
+  for (let i = 0; i < STARDUST_COUNT; i++) {
+    const pt = usable[Math.round(((i + 0.5) / STARDUST_COUNT) * (usable.length - 1))]
+    if (picks.every((p) => distance(p, pt) >= STARDUST_MIN_SPACING)) picks.push({ x: pt.x, y: pt.y })
+  }
+  return picks
 }
 
 /** Generate a layout for `tier` and keep re-rolling (new derived seed) until
@@ -180,8 +247,8 @@ export function isSolvable(level: Level): boolean {
 export function generateSolvableLevel(tier: TierConfig, seed: number): Level {
   let candidate = generateLevel(tier, seed)
   for (let attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
-    if (isSolvable(candidate)) return candidate
+    if (isSolvable(candidate)) break
     candidate = generateLevel(tier, seed + attempt + 1)
   }
-  return candidate
+  return { ...candidate, stardust: placeStardust(candidate) }
 }

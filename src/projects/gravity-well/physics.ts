@@ -92,6 +92,14 @@ export function distance(a: Vec2, b: Vec2): number {
   return Math.hypot(a.x - b.x, a.y - b.y)
 }
 
+/** Stardust: optional pickups placed along a landing route. They have no
+ * mass and never crash the rocket; flying through one collects it. */
+export const STARDUST_RADIUS = 9
+
+export function touchesStardust(pos: Vec2, stardust: Vec2): boolean {
+  return distance(pos, stardust) < STARDUST_RADIUS + ROCKET_RADIUS
+}
+
 /** Where a body actually is at time `t` (seconds since the shot in question
  * started) -- static bodies just return their fixed position; orbiting ones
  * sweep around their orbit's center. This is the single source of truth for
@@ -152,18 +160,25 @@ export function beamStrengthAt(pos: Vec2, alien: Alien): number {
 }
 
 /** Advance the rocket by one fixed tick (semi-implicit Euler: velocity first,
- * then position), using the gravity field as it is at time `t`. An alien's
- * tractor beam, if present and in range, damps velocity afterward -- it's a
- * drag effect, not a force, so it doesn't feed back into the gravity math. */
+ * then position), using the gravity field as it is at time `t`. `thrust`
+ * (px/s^2) is the mid-flight boost, pushing along the direction of travel.
+ * An alien's tractor beam, if present and in range, damps velocity
+ * afterward -- it's a drag effect, not a force, so it doesn't feed back into
+ * the gravity math. */
 export function stepRocket(
   state: RocketState,
   bodies: Body[],
   dt: number,
   t = 0,
   alien?: Alien,
+  thrust = 0,
 ): RocketState {
   const acc = accelerationAt(state.pos, bodies, t)
   let vel = { x: state.vel.x + acc.x * dt, y: state.vel.y + acc.y * dt }
+  if (thrust > 0) {
+    const speed = Math.hypot(vel.x, vel.y)
+    if (speed > 1e-6) vel = { x: vel.x + (vel.x / speed) * thrust * dt, y: vel.y + (vel.y / speed) * thrust * dt }
+  }
   if (alien) {
     const strength = beamStrengthAt(state.pos, alien)
     if (strength > 0) {

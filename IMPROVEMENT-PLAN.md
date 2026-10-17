@@ -194,6 +194,8 @@ Version bumps follow `CLAUDE.md`:
 ### Xenofuse, Gravity Well, Solar Ward
 
 - [ ] **Save best scores and progress.** None of them keep anything between visits.
+  - Gravity Well is done (1.6.0): it saves the current run and the best run total per player,
+    with a homepage summary. Xenofuse and Solar Ward still need it.
 - [ ] **Add touch controls to Solar Ward.** It can only be played with a keyboard (no touch or
   pointer controls), so it can't be played on a phone or tablet.
 
