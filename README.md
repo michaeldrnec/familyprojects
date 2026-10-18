@@ -52,7 +52,8 @@ Grouped the way the homepage's filter groups them.
 - **Ion Perimeter** (`/ion-perimeter`): space tower defense. Build and upgrade weapon platforms
   along an enemy lane to protect your outpost core through 20 waves and two dreadnought bosses.
 - **Invader Protocol** (`/invader-protocol`): break a marching alien lattice on the beat, with
-  four weapons that run hot, ventable bunkers, and a tempo that climbs as the invaders fall.
+  four weapons that run hot, ventable bunkers, and a tempo that climbs as the invaders fall. Every
+  fifth wave brings a boss, The Conductor.
 
 ### Physics Mayhem
 

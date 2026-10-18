@@ -90,6 +90,12 @@ export function damageCell(b: Bunker, cell: Cell, dmg: number) {
   b.energy = Math.min(ENERGY_MAX, b.energy + absorbed * ENERGY_PER_DAMAGE)
 }
 
+// The player's own shots: they chip the cell like enemy fire does, but bank
+// no charge, so a bunker can't be farmed for vent energy.
+export function chipCell(cell: Cell, dmg: number) {
+  cell.hp = Math.max(0, cell.hp - dmg)
+}
+
 // Invaders plowing into a bunker erase whatever cells they overlap.
 export function eraseRect(b: Bunker, x0: number, y0: number, x1: number, y1: number): boolean {
   if (b.vented) return false

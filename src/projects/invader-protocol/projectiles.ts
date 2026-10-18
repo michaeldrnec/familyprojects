@@ -1,15 +1,26 @@
 // Projectile movement and every collision rule: swept player shots against
-// invaders (pierce, Drone armor, Grunt barriers, Siege splash) and the UFO;
-// enemy shots against bunker cells, vent beams, and the cannon.
+// the player's own bunkers (which block them), invaders (pierce, Drone armor,
+// Grunt barriers, Siege splash), the boss, and the UFO; enemy shots against
+// bunker cells, vent beams, and the cannon.
 import {
   BONUS_LIFE_EVERY,
+  BOSS_CORE_R,
+  BOSS_HALF_H,
+  BOSS_HALF_W,
+  BOSS_HULL_MULT,
+  BOSS_OVERDRIVE,
+  BOSS_POD_HALF,
+  BOSS_POD_POINTS,
+  BOSS_POINTS,
   DRONE_ARMOR_MULT,
   INVADER_HALF_H,
   INVADER_HALF_W,
+  PLAYER_CELL_DAMAGE,
   PLAYER_HALF_H,
   PLAYER_HALF_W,
   PLAYER_Y,
   SIEGE_CEILING_Y,
+  SIEGE_CELL_DAMAGE,
   SIEGE_SPLASH_DAMAGE,
   SIEGE_SPLASH_RADIUS,
   UFO_HALF_H,
@@ -18,12 +29,13 @@ import {
   VIEW_H,
   WEAPONS,
 } from './constants'
-import { cellAt, damageCell, mostDamaged, restore } from './bunkers'
+import { cellAt, chipCell, damageCell, mostDamaged, restore, type Bunker, type Cell } from './bunkers'
+import { BOSS_DEATH_TIME, livingPods, podX, podY, type BossPod } from './boss'
 import { hasBarrier, invaderX, invaderY, type Invader } from './grid'
 import { isVulnerable, killPlayer } from './player'
 import { moveEnemyShot } from './fragments'
 import { nextUfoDelay, ufoReward } from './ufo'
-import { burst, floater, ring, shake } from './effects'
+import { burst, flash, floater, ring, shake } from './effects'
 import type { PlayerShot } from './weapons'
 import type { GameState } from './game'
 import * as audio from './audio'
@@ -107,6 +119,127 @@ export function hitPlayer(gs: GameState) {
   if (killPlayer(p)) gs.over = 'destroyed'
 }
 
+// --- The boss -------------------------------------------------------------
+
+export function damageBossPod(gs: GameState, pod: BossPod, amount: number) {
+  const boss = gs.boss
+  if (!boss || boss.dying > 0 || pod.hp <= 0) return
+  pod.hp -= amount
+  pod.flash = 0.08
+  if (pod.hp > 0) return
+  pod.hp = 0
+  const x = podX(boss, pod)
+  const y = podY(boss)
+  addScore(gs, BOSS_POD_POINTS)
+  floater(gs.fx, x, y - 40, `+${BOSS_POD_POINTS.toLocaleString()}`, '#fde047', 32)
+  burst(gs.fx, gs.rng, x, y, ['#67e8f9', '#93c5fd', '#ffffff', '#fbbf24'], 36, 460, 0.8)
+  ring(gs.fx, x, y, 150, '#67e8f9', 0.5, 5)
+  shake(gs.fx, 0.3, 10)
+  audio.playExplosion('large')
+  if (livingPods(boss).length > 0) return
+  // Both pods down: the shield over the core shatters.
+  boss.phase = 'exposed'
+  ring(gs.fx, boss.x, boss.y, 320, '#93c5fd', 0.6, 8)
+  ring(gs.fx, boss.x, boss.y, 200, '#ffffff', 0.4, 3)
+  burst(gs.fx, gs.rng, boss.x, boss.y, ['#93c5fd', '#e0f2fe', '#ffffff'], 40, 520, 0.7)
+  floater(gs.fx, boss.x, boss.y + 120, 'CORE EXPOSED', '#93c5fd', 34)
+  flash(gs.fx, '147,197,253')
+  audio.playSnap()
+}
+
+export function damageBossCore(gs: GameState, amount: number) {
+  const boss = gs.boss
+  if (!boss || boss.phase === 'shielded' || boss.dying > 0) return
+  boss.coreHp -= amount
+  boss.coreFlash = 0.08
+  if (boss.phase === 'exposed' && boss.coreHp < boss.coreMaxHp * BOSS_OVERDRIVE && boss.coreHp > 0) {
+    boss.phase = 'overdrive'
+    floater(gs.fx, boss.x, boss.y + 120, 'OVERDRIVE', '#f87171', 38)
+    ring(gs.fx, boss.x, boss.y, 260, '#f87171', 0.5, 6)
+    flash(gs.fx, '248,113,113')
+    audio.playOverdrive()
+  }
+  if (boss.coreHp > 0) return
+  boss.coreHp = 0
+  boss.dying = BOSS_DEATH_TIME
+  const points = BOSS_POINTS * boss.level
+  addScore(gs, points)
+  floater(gs.fx, boss.x, boss.y + 110, `+${points.toLocaleString()}`, '#fde047', 48)
+  // Its fire dies with it; Grunt fragments are already in the air.
+  gs.enemyShots = gs.enemyShots.filter((s) => s.kind === 'fragment')
+  gs.markers = []
+  shake(gs.fx, 0.8, 14)
+  audio.playBossDown()
+}
+
+// Damage to whatever part of the boss sits within `halfW` of x (vent beams).
+export function damageBossInSpan(gs: GameState, x: number, halfW: number, amount: number) {
+  const boss = gs.boss
+  if (!boss) return
+  for (const pod of boss.pods) if (Math.abs(podX(boss, pod) - x) <= halfW + BOSS_POD_HALF) damageBossPod(gs, pod, amount)
+  if (Math.abs(boss.x - x) <= halfW + BOSS_CORE_R) damageBossCore(gs, amount)
+}
+
+type BossPart = BossPod | 'core' | 'hull'
+
+// The first part of the boss along a shot's path. Pods hang below the hull
+// and the core sits in its middle, so a hull hit only counts away from the
+// core (a shot under the core flies on into it).
+function bossHit(gs: GameState, x0: number, y0: number, x1: number, y1: number): { t: number; part: BossPart } | null {
+  const boss = gs.boss
+  if (!boss || boss.dying > 0) return null
+  let best: { t: number; part: BossPart } | null = null
+  const consider = (t: number | null, part: BossPart) => {
+    if (t !== null && (!best || t < best.t)) best = { t, part }
+  }
+  const r = SHOT_RADIUS
+  for (const pod of livingPods(boss)) consider(segmentHitsBox(x0, y0, x1, y1, podX(boss, pod), podY(boss), BOSS_POD_HALF + r, BOSS_POD_HALF + r), pod)
+  consider(segmentHitsBox(x0, y0, x1, y1, boss.x, boss.y, BOSS_CORE_R + r, BOSS_CORE_R + r), 'core')
+  const th = segmentHitsBox(x0, y0, x1, y1, boss.x, boss.y, BOSS_HALF_W + r, BOSS_HALF_H + r)
+  if (th !== null && Math.abs(x0 + (x1 - x0) * th - boss.x) > BOSS_CORE_R) consider(th, 'hull')
+  return best
+}
+
+// A direct hit on the boss. The shield turns everything away from the core
+// while a pod lives; after that the hull plating soaks most of a hit (the
+// Needle Rail ignores armor, as it does everywhere else).
+function hitBoss(gs: GameState, part: BossPart, shot: PlayerShot, x: number, y: number) {
+  const boss = gs.boss!
+  if (typeof part === 'object') {
+    damageBossPod(gs, part, shot.damage)
+    burst(gs.fx, gs.rng, x, y, [WEAPONS[shot.weapon].color, '#ffffff'], 5, 180, 0.25)
+    if (part.hp > 0) audio.playHit()
+    return
+  }
+  if (boss.phase === 'shielded') {
+    burst(gs.fx, gs.rng, x, y, ['#93c5fd', '#e0f2fe'], 6, 200, 0.25)
+    audio.playDeflect()
+    gs.barrierBlocks++
+    return
+  }
+  const plated = part === 'hull' && shot.weapon !== 'needle'
+  damageBossCore(gs, shot.damage * (plated ? BOSS_HULL_MULT : 1))
+  burst(gs.fx, gs.rng, x, y, plated ? ['#94a3b8', '#e2e8f0'] : [WEAPONS[shot.weapon].color, '#fde047', '#ffffff'], plated ? 4 : 7, 200, 0.25)
+  audio.playHit()
+}
+
+// --- Player shots ----------------------------------------------------------
+
+// Your own bunkers are solid to your shots: the first living cell along
+// this step's path, sampled at the midpoint and the end (a step is at most
+// ~25 px, about half a cell).
+function bunkerHit(gs: GameState, x0: number, y0: number, x1: number, y1: number): { t: number; b: Bunker; cell: Cell } | null {
+  for (const t of [0.5, 1]) {
+    const x = x0 + (x1 - x0) * t
+    const y = y0 + (y1 - y0) * t
+    for (const b of gs.bunkers) {
+      const cell = cellAt(b, x, y, SHOT_RADIUS)
+      if (cell) return { t, b, cell }
+    }
+  }
+  return null
+}
+
 function detonate(gs: GameState, x: number, y: number, direct: Invader | null, shot: PlayerShot) {
   if (direct) damageInvader(gs, direct, shot.damage, shot.perfect)
   for (const inv of gs.grid.invaders) {
@@ -118,6 +251,13 @@ function detonate(gs: GameState, x: number, y: number, direct: Invader | null, s
     damageInvader(gs, inv, SIEGE_SPLASH_DAMAGE * (1 - 0.5 * (d / SIEGE_SPLASH_RADIUS)), shot.perfect)
   }
   if (gs.ufo && Math.hypot(gs.ufo.x - x, gs.ufo.y - y) <= SIEGE_SPLASH_RADIUS + UFO_HALF_W * 0.5) damageUfo(gs, SIEGE_SPLASH_DAMAGE)
+  const boss = gs.boss
+  if (boss) {
+    for (const pod of boss.pods) {
+      if (Math.hypot(podX(boss, pod) - x, podY(boss) - y) <= SIEGE_SPLASH_RADIUS + BOSS_POD_HALF * 0.6) damageBossPod(gs, pod, SIEGE_SPLASH_DAMAGE)
+    }
+    if (Math.hypot(boss.x - x, boss.y - y) <= SIEGE_SPLASH_RADIUS + BOSS_CORE_R * 0.6) damageBossCore(gs, SIEGE_SPLASH_DAMAGE)
+  }
   ring(gs.fx, x, y, SIEGE_SPLASH_RADIUS, '#fb923c', 0.35, 5)
   burst(gs.fx, gs.rng, x, y, ['#fb923c', '#fde047', '#f87171'], 22, 380, 0.5)
   shake(gs.fx, 0.15, 6)
@@ -157,6 +297,19 @@ export function stepPlayerShots(gs: GameState, dt: number) {
       }
     }
 
+    // A bunker cell in the way stops the shot before anything beyond it.
+    const block = bunkerHit(gs, x0, y0, shot.x, shot.y)
+    if (block && (!best || block.t <= bestT)) {
+      chipCell(block.cell, shot.weapon === 'siege' ? SIEGE_CELL_DAMAGE : PLAYER_CELL_DAMAGE)
+      const cx = block.b.x + block.cell.dx
+      const cy = block.b.y + block.cell.dy
+      burst(gs.fx, gs.rng, x0 + (shot.x - x0) * block.t, y0 + (shot.y - y0) * block.t, ['#38bdf8', '#e0f2fe', WEAPONS[shot.weapon].color], 5, 160, 0.25)
+      if (block.cell.hp <= 0) burst(gs.fx, gs.rng, cx, cy, ['#38bdf8', '#93c5fd'], 8, 160, 0.4)
+      audio.playCellHit()
+      best = null
+      alive = false
+    }
+
     if (best) {
       const hx = x0 + (shot.x - x0) * bestT
       const hy = y0 + (shot.y - y0) * bestT
@@ -179,6 +332,17 @@ export function stepPlayerShots(gs: GameState, dt: number) {
         shot.hitIds.push(best.id)
         shot.pierceLeft--
         if (shot.pierceLeft <= 0) alive = false
+      }
+    }
+
+    if (alive && gs.boss) {
+      const hit = bossHit(gs, x0, y0, shot.x, shot.y)
+      if (hit) {
+        const hx = x0 + (shot.x - x0) * hit.t
+        const hy = y0 + (shot.y - y0) * hit.t
+        hitBoss(gs, hit.part, shot, hx, hy)
+        if (shot.weapon === 'siege') detonate(gs, hx, hy, null, shot)
+        alive = false
       }
     }
 

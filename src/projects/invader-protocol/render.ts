@@ -1,6 +1,10 @@
 // Draws one frame in the 1920x1080 logical space (the component sets the
 // canvas transform). Playfield first (shaken on impacts), then the HUD.
 import {
+  BOSS_CORE_R,
+  BOSS_HALF_H,
+  BOSS_HALF_W,
+  BOSS_POD_HALF,
   CELL_HP,
   CELL_R,
   COLS,
@@ -31,6 +35,7 @@ import { markerFiring } from './ufo'
 import { DAMAGE_LIFE, FLASH_LIFE, FLOATER_LIFE } from './effects'
 import { tierFor } from './audio'
 import { heatColor, type GameState } from './game'
+import { BOSS_DEATH_TIME, bossHealth, podX, podY, type Boss } from './boss'
 import type { Rng } from '../../shared/rng'
 
 export interface Star {
@@ -241,6 +246,151 @@ function drawBarriers(ctx: CanvasRenderingContext2D, gs: GameState) {
     ctx.lineTo(x, y - ROW_SPACING / 2 + 20)
     ctx.stroke()
   }
+}
+
+// --- The Conductor ----------------------------------------------------------
+
+function drawBoss(ctx: CanvasRenderingContext2D, gs: GameState, boss: Boss) {
+  const pulse = Math.pow(1 - beatPhase(gs), 3)
+  const dying = boss.dying > 0
+  const overdrive = boss.phase === 'overdrive'
+  ctx.save()
+  if (dying) {
+    // Flickers and judders more as the death chain runs on.
+    const k = 1 - boss.dying / BOSS_DEATH_TIME
+    ctx.globalAlpha = Math.floor(gs.clock.time * 20) % 2 ? 1 : 0.55 + 0.4 * (1 - k)
+    ctx.translate((Math.random() * 2 - 1) * 6 * k, (Math.random() * 2 - 1) * 6 * k)
+  }
+  ctx.translate(boss.x, boss.y)
+
+  // Shield links from each living pod up to the core.
+  if (boss.phase === 'shielded') {
+    ctx.strokeStyle = `rgba(147,197,253,${0.25 + 0.25 * pulse})`
+    ctx.lineWidth = 3
+    ctx.beginPath()
+    for (const pod of boss.pods) {
+      if (pod.hp <= 0) continue
+      ctx.moveTo(podX(boss, pod) - boss.x, podY(boss) - boss.y)
+      ctx.lineTo(0, 0)
+    }
+    ctx.stroke()
+  }
+
+  // Hull.
+  const W = BOSS_HALF_W
+  const H = BOSS_HALF_H
+  const hull = ctx.createLinearGradient(0, -H, 0, H)
+  hull.addColorStop(0, overdrive ? '#7f1d1d' : '#581c87')
+  hull.addColorStop(1, overdrive ? '#450a0a' : '#2e1065')
+  ctx.fillStyle = hull
+  ctx.shadowColor = overdrive ? '#f87171' : '#e879f9'
+  ctx.shadowBlur = 24 + 16 * pulse
+  ctx.beginPath()
+  ctx.moveTo(-W, -8)
+  ctx.lineTo(-W + 50, -H)
+  ctx.lineTo(W - 50, -H)
+  ctx.lineTo(W, -8)
+  ctx.lineTo(W - 30, H - 14)
+  ctx.lineTo(70, H)
+  ctx.lineTo(-70, H)
+  ctx.lineTo(-W + 30, H - 14)
+  ctx.closePath()
+  ctx.fill()
+  ctx.shadowBlur = 0
+  ctx.strokeStyle = overdrive ? '#fca5a5' : '#e879f9'
+  ctx.lineWidth = 3
+  ctx.stroke()
+
+  // Equalizer bars either side of the core, jumping on every beat: it
+  // conducts the music the formation marches to.
+  for (let i = 0; i < 5; i++) {
+    const wobble = 0.55 + 0.45 * Math.sin(gs.clock.index * 1.7 + i * 2.1)
+    const h = 8 + 30 * pulse * wobble
+    ctx.fillStyle = mix([232, 121, 249], [253, 224, 71], i / 4)
+    for (const side of [-1, 1]) ctx.fillRect(side * (70 + i * 22) - 7, 6 - h, 14, h)
+  }
+
+  // Core.
+  const coreR = BOSS_CORE_R - 6 + 6 * pulse
+  if (boss.phase !== 'shielded' || boss.coreFlash > 0) {
+    const g = ctx.createRadialGradient(0, 0, 4, 0, 0, coreR)
+    g.addColorStop(0, '#ffffff')
+    g.addColorStop(0.35, boss.coreFlash > 0 ? '#ffffff' : overdrive ? '#fca5a5' : '#fde047')
+    g.addColorStop(1, overdrive ? '#dc2626' : '#f59e0b')
+    ctx.fillStyle = g
+  } else {
+    ctx.fillStyle = '#a16207'
+  }
+  ctx.shadowColor = overdrive ? '#f87171' : '#fde047'
+  ctx.shadowBlur = boss.phase === 'shielded' ? 10 : 30
+  ctx.beginPath()
+  ctx.arc(0, 0, coreR, 0, Math.PI * 2)
+  ctx.fill()
+  ctx.shadowBlur = 0
+
+  if (boss.phase === 'shielded') {
+    const shimmer = 0.5 + 0.2 * Math.sin(gs.clock.time * 6)
+    ctx.strokeStyle = `rgba(147,197,253,${shimmer})`
+    ctx.fillStyle = `rgba(147,197,253,${shimmer * 0.25})`
+    ctx.lineWidth = 4
+    ctx.shadowColor = '#93c5fd'
+    ctx.shadowBlur = 16
+    hexPath(ctx, 0, 0, BOSS_CORE_R + 16)
+    ctx.fill()
+    ctx.stroke()
+    ctx.shadowBlur = 0
+  }
+
+  // Pods: live ones are the targets while the shield is up.
+  for (const pod of boss.pods) {
+    const px = podX(boss, pod) - boss.x
+    const py = podY(boss) - boss.y
+    if (pod.hp <= 0) {
+      ctx.fillStyle = '#1e1b4b'
+      hexPath(ctx, px, py, BOSS_POD_HALF - 8)
+      ctx.fill()
+      ctx.strokeStyle = '#475569'
+      ctx.lineWidth = 2
+      ctx.stroke()
+      continue
+    }
+    ctx.fillStyle = pod.flash > 0 ? '#ffffff' : '#0ea5e9'
+    ctx.shadowColor = '#38bdf8'
+    ctx.shadowBlur = 18
+    hexPath(ctx, px, py, BOSS_POD_HALF)
+    ctx.fill()
+    ctx.shadowBlur = 0
+    ctx.strokeStyle = '#e0f2fe'
+    ctx.lineWidth = 3
+    ctx.stroke()
+    ctx.fillStyle = '#082f49'
+    ctx.fillRect(px - 7, py + 10, 14, 26)
+    ctx.fillStyle = '#7dd3fc'
+    ctx.beginPath()
+    ctx.arc(px, py - 2, 9 + 3 * pulse, 0, Math.PI * 2)
+    ctx.fill()
+    if (pod.hp < pod.maxHp) {
+      ctx.fillStyle = 'rgba(15,23,42,0.85)'
+      ctx.fillRect(px - 34, py - BOSS_POD_HALF - 12, 68, 5)
+      ctx.fillStyle = '#7dd3fc'
+      ctx.fillRect(px - 34, py - BOSS_POD_HALF - 12, 68 * (pod.hp / pod.maxHp), 5)
+    }
+  }
+  ctx.restore()
+}
+
+// Health bar across the top while the boss is in play.
+function drawBossBar(ctx: CanvasRenderingContext2D, boss: Boss) {
+  const w = 640
+  const x = (VIEW_W - w) / 2
+  const y = 62
+  ctx.fillStyle = 'rgba(15,23,42,0.85)'
+  ctx.fillRect(x, y, w, 12)
+  ctx.fillStyle = boss.phase === 'overdrive' ? '#f87171' : boss.phase === 'exposed' ? '#fde047' : '#e879f9'
+  ctx.fillRect(x, y, w * bossHealth(boss), 12)
+  ctx.strokeStyle = 'rgba(226,232,240,0.45)'
+  ctx.lineWidth = 1
+  ctx.strokeRect(x, y, w, 12)
 }
 
 // --- Bunkers, beams, markers ----------------------------------------------
@@ -545,7 +695,13 @@ function drawHud(ctx: CanvasRenderingContext2D, gs: GameState) {
   ctx.fillText(`♩ ${bpm} BPM`, VIEW_W / 2, 30)
   ctx.font = '14px sans-serif'
   ctx.fillStyle = 'rgba(226,232,240,0.6)'
-  ctx.fillText(`${n} INVADERS · TIER ${tierFor(Math.max(1, n))}`, VIEW_W / 2, 50)
+  if (gs.boss) {
+    const label = gs.boss.phase === 'shielded' ? 'SHIELDED · TAKE OUT THE PODS' : gs.boss.phase === 'exposed' ? 'CORE EXPOSED' : 'OVERDRIVE'
+    ctx.fillText(`THE CONDUCTOR · ${label}`, VIEW_W / 2, 50)
+    drawBossBar(ctx, gs.boss)
+  } else {
+    ctx.fillText(`${n} INVADERS · TIER ${tierFor(Math.max(1, n))}`, VIEW_W / 2, 50)
+  }
 
   // Heat bar, bottom left.
   const ws = gs.weapon
@@ -624,6 +780,12 @@ function drawHud(ctx: CanvasRenderingContext2D, gs: GameState) {
     ctx.shadowBlur = 30
     ctx.font = 'bold 84px sans-serif'
     ctx.fillText(`WAVE ${gs.wave}`, VIEW_W / 2, 620)
+    if (gs.boss) {
+      ctx.fillStyle = '#f87171'
+      ctx.shadowColor = '#f87171'
+      ctx.font = 'bold 40px sans-serif'
+      ctx.fillText('⚠ THE CONDUCTOR ⚠', VIEW_W / 2, 684)
+    }
     ctx.shadowBlur = 0
     ctx.globalAlpha = 1
   }
@@ -642,6 +804,7 @@ export function render(ctx: CanvasRenderingContext2D, gs: GameState, stars: Star
   drawBeams(ctx, gs)
   drawBarriers(ctx, gs)
   for (const inv of gs.grid.invaders) if (inv.alive) drawInvader(ctx, gs, inv)
+  if (gs.boss) drawBoss(ctx, gs, gs.boss)
   drawUfo(ctx, gs)
   drawShots(ctx, gs)
   drawPlayer(ctx, gs)

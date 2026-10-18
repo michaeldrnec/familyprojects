@@ -240,11 +240,13 @@ function InvaderProtocol() {
               bunkers when they're charged.
             </p>
             <ul className="ip-controls">
-              <li><kbd>A</kbd>/<kbd>D</kbd> or <kbd>←</kbd>/<kbd>→</kbd> move · <kbd>Shift</kbd> dash</li>
-              <li><kbd>Space</kbd> or left click: fire · <kbd>F</kbd> or right click: vent the bunker above you</li>
-              <li><kbd>Q</kbd>/<kbd>E</kbd>, wheel, or <kbd>1</kbd>–<kbd>4</kbd> switch weapon · <kbd>Esc</kbd> pause</li>
-              <li>Gamepad: stick move · RT fire · A/LT dash · B vent · LB/RB or D-pad weapons</li>
+              <li className="ip-keys"><kbd>A</kbd>/<kbd>D</kbd> or <kbd>←</kbd>/<kbd>→</kbd> move · <kbd>Shift</kbd> dash</li>
+              <li className="ip-keys"><kbd>Space</kbd> or left click: fire · <kbd>F</kbd> or right click: vent the bunker above you</li>
+              <li className="ip-keys"><kbd>Q</kbd>/<kbd>E</kbd>, wheel, or <kbd>1</kbd>–<kbd>4</kbd> switch weapon · <kbd>Esc</kbd> pause</li>
+              <li className="ip-keys">Gamepad: stick move · RT fire · A/LT dash · B vent · LB/RB or D-pad weapons</li>
               <li>Shots fired when the gold ring closes on your cannon cost no heat</li>
+              <li>Your bunkers stop your shots too, so step out from under them to fire</li>
+              <li>Every 5th wave, The Conductor arrives: knock out its two pods to break its shield</li>
             </ul>
             {progress.bestScore > 0 && (
               <p className="ip-best">

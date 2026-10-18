@@ -357,3 +357,37 @@ export function playGameOver() {
   const t = ctx.currentTime
   ;[246.94, 233.08, 220, 207.65].forEach((f, i) => tone(sfx!, 'square', f, t + i * 0.22, 0.14, 0.35))
 }
+
+// --- The Conductor (boss) -------------------------------------------------
+
+// A two-tone klaxon as the boss descends.
+export function playBossWarning() {
+  if (!ctx || !sfx) return
+  const t = ctx.currentTime
+  for (let i = 0; i < 3; i++) {
+    tone(sfx, 'sawtooth', 440, t + i * 0.5, 0.12, 0.22, undefined, 0.02)
+    tone(sfx, 'sawtooth', 330, t + i * 0.5 + 0.25, 0.12, 0.22, undefined, 0.02)
+  }
+}
+
+// The boss's volleys: a heavy, low zap so they read apart from the formation's.
+export function playBossFire() {
+  if (!ctx || !sfx) return
+  const t = ctx.currentTime
+  tone(sfx, 'square', 260, t, 0.07, 0.12, 90)
+}
+
+export function playOverdrive() {
+  if (!ctx || !sfx) return
+  const t = ctx.currentTime
+  tone(sfx, 'sawtooth', 110, t, 0.25, 0.9, 440, 0.05)
+  noise(sfx, t, 0.6, 0.18, 'bandpass', 800, 3, 4000)
+}
+
+export function playBossDown() {
+  if (!ctx || !sfx) return
+  const t = ctx.currentTime
+  playExplosion('large')
+  tone(sfx, 'sawtooth', 300, t, 0.2, 1.4, 40)
+  ;[392, 523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(sfx!, 'triangle', f, t + 1.4 + i * 0.09, 0.14, 0.3))
+}

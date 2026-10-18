@@ -1,9 +1,12 @@
 // The whole simulation: GameState, wave setup, and one fixed-size update
-// step in the order the plan lays out (input -> player -> beat -> grid ->
+// step in the order the plan lays out (input -> player -> beat -> grid/boss ->
 // enemy fire -> weapons -> projectiles -> bunkers/beams -> UFO -> deaths ->
-// wave/game-over -> effects). The React component only drives the clock
+// wave/game-over -> effects). Every BOSS_EVERY-th wave is a boss wave: an
+// empty formation and The Conductor (boss.ts). The React component only drives the clock
 // and draws.
 import {
+  BOSS_HALF_H,
+  BOSS_HALF_W,
   INVADER_HALF_H,
   INVADER_HALF_W,
   INVADER_POINTS,
@@ -25,6 +28,7 @@ import { isPerfectBeat, newBeatClock, stepFrequency, tickBeat, type BeatClock } 
 import {
   checkColumnSnaps,
   columnX,
+  emptyGrid,
   invaderX,
   invaderY,
   livingCount,
@@ -43,7 +47,8 @@ import { canVent, eraseRect, newBunkers, updateBunkers, vent, BUNKER_HALF_W, typ
 import { makeBolt, makeFragments, type EnemyShot } from './fragments'
 import { markerDone, markerFiring, nextUfoDelay, spawnUfo, updateUfo, type Marker, type Ufo } from './ufo'
 import { burst, floater, flash, newEffects, ring, shake, updateEffects, type Effects } from './effects'
-import { addScore, damageInvader, damageUfo, hitPlayer, stepEnemyShots, stepPlayerShots } from './projectiles'
+import { addScore, damageBossInSpan, damageInvader, damageUfo, hitPlayer, stepEnemyShots, stepPlayerShots } from './projectiles'
+import { BOSS_DEATH_TIME, bossBeat, bossTempoN, isBossWave, newBoss, updateBoss, type Boss } from './boss'
 import type { FrameInput } from './input'
 import { makeRng, type Rng } from '../../shared/rng'
 import * as audio from './audio'
@@ -63,6 +68,7 @@ export interface GameState {
   enemyShots: EnemyShot[]
   bunkers: Bunker[]
   beams: VentBeam[]
+  boss: Boss | null
   ufo: Ufo | null
   ufoTimer: number
   markers: Marker[]
@@ -103,6 +109,7 @@ export function newGame(seed: number): GameState {
     enemyShots: [],
     bunkers: newBunkers(),
     beams: [],
+    boss: null,
     ufo: null,
     ufoTimer: nextUfoDelay(rng),
     markers: [],
@@ -127,9 +134,20 @@ export function newGame(seed: number): GameState {
 }
 
 // The next wave spawns lower and fires faster; all three bunkers rebuild.
-function startWave(gs: GameState) {
+// A boss wave brings The Conductor instead of a formation.
+export function startWave(gs: GameState) {
   gs.wave++
-  gs.grid = newGrid(gs.rng, Math.min(WAVE_DROP * (gs.wave - 1), WAVE_DROP_MAX), fireScaleFor(gs.wave), () => gs.ids++)
+  if (isBossWave(gs.wave)) {
+    gs.grid = emptyGrid(gs.rng, fireScaleFor(gs.wave), () => gs.ids++)
+    gs.boss = newBoss(gs.wave)
+    if (gs.ufo) {
+      gs.ufo = null
+      audio.stopUfoHum()
+    }
+    audio.playBossWarning()
+  } else {
+    gs.grid = newGrid(gs.rng, Math.min(WAVE_DROP * (gs.wave - 1), WAVE_DROP_MAX), fireScaleFor(gs.wave), () => gs.ids++)
+  }
   gs.bunkers = newBunkers()
   gs.beams = []
   gs.enemyShots = []
@@ -184,6 +202,32 @@ function resolveKills(gs: GameState) {
   }
 }
 
+// Moves the boss; once its core is gone, a chain of explosions plays out
+// across the hull before it's removed and the wave counts as cleared.
+function updateBossDeath(gs: GameState, dt: number) {
+  const boss = gs.boss!
+  const before = boss.dying
+  updateBoss(boss, dt)
+  if (before <= 0) return
+  const pops = (t: number) => Math.floor((BOSS_DEATH_TIME - t) * 8)
+  if (pops(boss.dying) !== pops(before)) {
+    const x = boss.x + gs.rng.range(-BOSS_HALF_W, BOSS_HALF_W)
+    const y = boss.y + gs.rng.range(-BOSS_HALF_H, BOSS_HALF_H)
+    burst(gs.fx, gs.rng, x, y, ['#e879f9', '#fde047', '#fb923c', '#ffffff'], 18, 360, 0.6)
+    ring(gs.fx, x, y, 90, '#fde047', 0.4, 3)
+    audio.playExplosion('small')
+  }
+  if (boss.dying > 0) return
+  burst(gs.fx, gs.rng, boss.x, boss.y, ['#e879f9', '#fde047', '#fb923c', '#ffffff', '#67e8f9'], 90, 760, 1.2)
+  ring(gs.fx, boss.x, boss.y, 520, '#e879f9', 0.9, 10)
+  ring(gs.fx, boss.x, boss.y, 320, '#ffffff', 0.6, 4)
+  floater(gs.fx, VIEW_W / 2, 420, 'THE CONDUCTOR FALLS', '#fde047', 48)
+  shake(gs.fx, 0.6, 20)
+  flash(gs.fx, '253,224,71')
+  audio.playExplosion('large')
+  gs.boss = null
+}
+
 function tryVent(gs: GameState) {
   const p = gs.player
   if (!isAlive(p)) return
@@ -227,14 +271,24 @@ export function stepGame(gs: GameState, input: FrameInput, dt: number) {
     burst(gs.fx, gs.rng, p.x, PLAYER_Y + 10, ['#67e8f9', '#e879f9'], 10, 220, 0.3)
   }
 
-  // --- Beat clock & grid -------------------------------------------------
+  // --- Beat clock, grid & boss --------------------------------------------
+  // In a boss wave the boss's remaining health stands in for the invader
+  // count, so the tempo still climbs as it breaks apart.
   const n = livingCount(grid)
-  const freq = stepFrequency(Math.max(1, n))
+  const tempoN = gs.boss ? bossTempoN(gs.boss) : Math.max(1, n)
+  const freq = stepFrequency(tempoN)
   if (tickBeat(gs.clock, dt, freq)) {
-    audio.onBeat(gs.clock.index - 1, Math.max(1, n), 1 / freq)
+    audio.onBeat(gs.clock.index - 1, tempoN, 1 / freq)
     if (gs.waveIntro <= 0 && n > 0) marchStep(grid, gs.rng)
+    if (gs.boss && gs.waveIntro <= 0) {
+      const volley = bossBeat(gs.boss, p.x)
+      for (const b of volley.bolts) gs.enemyShots.push(makeBolt(b.x, b.y, b.angle))
+      for (const x of volley.markers) gs.markers.push({ x, t: 0, hitDone: false })
+      if (volley.bolts.length > 0) audio.playBossFire()
+    }
   }
   updateGrid(grid, dt)
+  if (gs.boss) updateBossDeath(gs, dt)
   gs.waveIntro = Math.max(0, gs.waveIntro - dt)
   if (gs.waveIntro <= 0) {
     updateEnemyFire(grid, dt, gs.rng, (x, y, angle) => gs.enemyShots.push(makeBolt(x, y, angle)))
@@ -277,6 +331,7 @@ export function stepGame(gs: GameState, input: FrameInput, dt: number) {
       }
     }
     if (gs.ufo && Math.abs(gs.ufo.x - beam.x) <= beam.halfW) damageUfo(gs, beam.dps * dt)
+    damageBossInSpan(gs, beam.x, beam.halfW, beam.dps * dt)
   }
   gs.beams = gs.beams.filter((b) => b.t > 0)
   for (const inv of grid.invaders) {
@@ -293,7 +348,7 @@ export function stepGame(gs: GameState, input: FrameInput, dt: number) {
       gs.ufoTimer = nextUfoDelay(gs.rng)
       audio.stopUfoHum()
     }
-  } else if (gs.waveIntro <= 0 && gs.waveClear <= 0) {
+  } else if (gs.waveIntro <= 0 && gs.waveClear <= 0 && !gs.boss) {
     gs.ufoTimer -= dt
     if (gs.ufoTimer <= 0) {
       gs.ufo = spawnUfo(gs.rng)
@@ -320,7 +375,7 @@ export function stepGame(gs: GameState, input: FrameInput, dt: number) {
   if (gs.waveClear > 0) {
     gs.waveClear -= dt
     if (gs.waveClear <= 0) startWave(gs)
-  } else if (livingCount(grid) === 0) {
+  } else if (livingCount(grid) === 0 && !gs.boss) {
     gs.waveClear = 1.8
     gs.enemyShots = gs.enemyShots.filter((s) => s.kind === 'fragment')
     floater(gs.fx, VIEW_W / 2, 480, `WAVE ${gs.wave} CLEAR`, '#e879f9', 56)

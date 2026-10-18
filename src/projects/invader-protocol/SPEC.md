@@ -4,7 +4,8 @@
 > bunkers, and a tempo that climbs as they fall.
 
 Status: **built.** Playable at `/invader-protocol`. Section 6 records how the build resolved the
-spec's gaps and conflicts, and section 7 maps the code.
+spec's gaps and conflicts (and later changes: bunkers block the player's shots, and every fifth
+wave is a boss fight against The Conductor), and section 7 maps the code.
 
 ---
 
@@ -171,7 +172,7 @@ build uses. All of the numbers live in `constants.ts`, so they're easy to retune
 | Siege "arcing" | Vy −900, arcing | Travels straight; the arc is visual only (scale-up/down plus a shadow). Detonates on the first entity hit or at Y=100. |
 | Perfect Beat | ±50 ms of the bass pulse | Compared against beat timestamps in game time, not AudioContext time. On success: +25% speed, 0 heat, ×1.2 score on kills by that projectile, plus a chime and a flash. |
 | Overheat | locks 2.5 s, cooling to 0 | Heat falls linearly from 100 to 0 over 2.5 s with fire locked. Normal cooling: 25/s after 0.3 s without firing. |
-| Player shots vs. own bunkers | unspecified | Player shots pass through bunkers, since hardlight is friendly. "Chips cover shields" refers to Drone barriers. |
+| Player shots vs. own bunkers | unspecified | **Bunkers block player shots**, as in the arcade original (the first build let them pass, which made bunkers free cover). A shot stops at the first living cell and chips it for 25 (a Siege slug clears the whole cell). It banks **no charge**, so bunkers can't be farmed for vent energy. Vent beams are unaffected. "Chips cover shields" refers to Drone barriers. |
 | Enemy damage | unspecified | Plasma bolt 25 to a cell (3 hits per cell). Grunt fragment 30. Invaders touching a bunker erase the cells they overlap. Any hit on the player costs a life. |
 | Vent | converts E into a beam for 1.5 s; vaporizes the bunker | Requires E ≥ 10 and the player within the bunker's X-span. Beam DPS = 30 + 1.6·E to invaders in its X-span. It also erases enemy projectiles in the span. |
 | UFO points "by distance" | 1,000–5,000 | 1000 + 4000·clamp(abs(ufoX − playerX) / 960, 0, 1), so longer shots score more. Rounded to 100s. |
@@ -181,6 +182,7 @@ build uses. All of the numbers live in `constants.ts`, so they're easy to retune
 | Touch | unspecified | Phone-friendly on-screen buttons, following Starwarden: ◀ ▶ / Fire (hold) / Dash / Vent / weapon chip row. |
 | Formation layout | spawn domain X 200–1720, Y 100–500 | Columns 120 px apart (X 360–1560) and rows 80 px apart (Y 140–460), inside the spawn domain. That leaves room to march about 13 steps before the first drop. |
 | Enemy projectile speed | unspecified | Plasma bolts fall at 520 px/s. |
+| Boss waves | not in the spec (added later) | **Every 5th wave is The Conductor** instead of a formation: a mothership that sways across the top (Y=230) and attacks on the beat. **Shielded:** two side pods (300 HP, +100 per later boss) take turns firing aimed bolts every 2 beats, and a 3-bolt fan comes every 8 beats. Hits anywhere else deflect. **Exposed** (both pods down): the core takes full damage, and the hull plating takes 25% (the Needle ignores it). Core HP is 1200, +500 per later boss. It fires an aimed bolt every 3 beats and a 5-bolt fan every 4 (7 bolts from the second boss on). **Overdrive** (core below 40%): it sways faster, the fans get 2 more bolts, and it calls an orbital marker onto the cannon every 8 beats. The tempo reads the boss's total remaining HP as an invader count (minimum 10, about 165 BPM). Points: 1,000 per pod and 5,000 × boss number for the kill. No UFO during a boss wave. Siege splash and vent beams hurt it too. |
 
 ---
 
@@ -197,6 +199,7 @@ build uses. All of the numbers live in `constants.ts`, so they're easy to retune
 | `fragments.ts` | Enemy projectiles: plasma bolts and Grunt cluster fragments. |
 | `bunkers.ts` | Hex cells, absorption/charge, venting, UFO restore. |
 | `ufo.ts` | Apex Transponder passes, laser markers, reward. |
+| `boss.ts` | The Conductor: boss waves, phases, sway, the tempo it implies, and its beat-locked attack pattern. Collisions and damage live in `projectiles.ts`. |
 | `game.ts` | `GameState`, wave setup, and the fixed-step `stepGame()` in plan order (input → player → beat → grid → enemy fire → weapons → projectiles → bunkers/beams → UFO → deaths → wave/game-over → effects). |
 | `effects.ts` | Particles, rings, floaters, shake, flashes. |
 | `audio.ts` | Beat-locked bassline with tier layers, and all SFX (Web Audio, synthesized). |

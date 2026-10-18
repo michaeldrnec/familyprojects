@@ -131,3 +131,39 @@ export const MARKERS_PER_PASS = 2
 export const MARKER_TELEGRAPH = 1.2
 export const MARKER_BEAM = 0.5
 export const MARKER_HALF_W = 34
+
+// --- Player shots vs. own bunkers -----------------------------------------
+// Like the arcade original, your shots can't pass through your own cover:
+// each projectile stops at the first living cell and chips it.
+export const PLAYER_CELL_DAMAGE = 25 // 3 shots per cell
+export const SIEGE_CELL_DAMAGE = CELL_HP // a mortar slug takes out a whole cell
+
+// --- Boss: The Conductor (every BOSS_EVERY waves) -------------------------
+export const BOSS_EVERY = 5
+export const BOSS_Y = 230
+export const BOSS_ENTRY_Y = -160
+export const BOSS_HALF_W = 200 // hull
+export const BOSS_HALF_H = 56
+export const BOSS_CORE_R = 46
+export const BOSS_POD_DX = 150 // pods sit either side of the core
+export const BOSS_POD_DY = 34
+export const BOSS_POD_HALF = 36
+export const BOSS_SWAY = 520 // px either side of center
+export const BOSS_SWAY_RATE = [0.22, 0.3, 0.4] // rad/s for shielded / exposed / overdrive
+// HP grows with each boss met (k = 1 at wave 5, 2 at wave 10, ...).
+export const BOSS_CORE_HP = 1200
+export const BOSS_CORE_HP_PER = 500
+export const BOSS_POD_HP = 300
+export const BOSS_POD_HP_PER = 100
+export const BOSS_HULL_MULT = 0.25 // damage through the hull plating once the core is exposed
+export const BOSS_OVERDRIVE = 0.4 // core HP fraction that triggers overdrive
+// Attacks fire on the beat: every N beats.
+export const BOSS_POD_EVERY = 2 // each pod's aimed bolt (pods alternate)
+export const BOSS_AIM_EVERY = 3 // the core's aimed bolt
+export const BOSS_FAN_EVERY = 4 // a fan volley
+export const BOSS_MARKER_EVERY = 8 // orbital markers on the cannon (overdrive)
+export const BOSS_FAN_SPREAD = (24 * Math.PI) / 180
+export const BOSS_AIM_LIMIT = (50 * Math.PI) / 180
+export const BOSS_POD_POINTS = 1000
+export const BOSS_POINTS = 5000 // per boss level, k
+export const BOSS_TEMPO_FLOOR = 10 // the tempo reads HP as this many invaders, minimum (~165 BPM)

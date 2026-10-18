@@ -81,6 +81,15 @@ export function newGrid(rng: Rng, yOffset: number, fireScale: number, nextId: ()
   }
 }
 
+// A formation with nobody in it, for boss waves: every grid rule (march,
+// fire, snaps) then has nothing to act on.
+export function emptyGrid(rng: Rng, fireScale: number, nextId: () => number): Grid {
+  const grid = newGrid(rng, 0, fireScale, nextId)
+  for (const inv of grid.invaders) inv.alive = false
+  grid.colCleared.fill(true)
+  return grid
+}
+
 export function invaderX(grid: Grid, inv: Invader): number {
   return grid.originX + inv.col * COL_SPACING + grid.colOffset[inv.col] + inv.jx
 }
