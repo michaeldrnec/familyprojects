@@ -19,6 +19,11 @@ function wideTiles(count: number): Set<number> {
   return new Set(Array.from({ length: wide }, (_, j) => Math.round((j * count) / wide)))
 }
 
+// The project's badge: its drawn image if it has one, else its emoji.
+function ProjectIcon({ p }: { p: Project }) {
+  return p.iconImage ? <img src={p.iconImage} alt="" className="hd-icon-img" /> : p.icon
+}
+
 const RECENT = 'recent'
 const CONTINUE_COUNT = 3
 
@@ -33,7 +38,7 @@ function Tile({ p, wide, note }: { p: Project; wide: boolean; note?: string }) {
   return (
     <Link to={`/${p.slug}`} className={`hd-bento-tile ${wide ? 'wide' : ''}`} style={accentStyle(p)}>
       <span className="hd-bento-icon" aria-hidden="true">
-        {p.icon}
+        <ProjectIcon p={p} />
       </span>
       <span className="hd-bento-cat">{p.category}</span>
       <h3>{p.title}</h3>
@@ -87,7 +92,7 @@ function Home() {
             {recentProjects.slice(0, CONTINUE_COUNT).map((p) => (
               <Link key={p.slug} to={`/${p.slug}`} className="hd-continue-card" style={accentStyle(p)}>
                 <span className="hd-continue-icon" aria-hidden="true">
-                  {p.icon}
+                  <ProjectIcon p={p} />
                 </span>
                 <span className="hd-continue-text">
                   <strong>{p.title}</strong>
@@ -109,7 +114,7 @@ function Home() {
             <span className="hd-feature-btn">Play now →</span>
           </div>
           <div className="hd-feature-art" aria-hidden="true">
-            {featured.icon}
+            <ProjectIcon p={featured} />
           </div>
         </Link>
       )}

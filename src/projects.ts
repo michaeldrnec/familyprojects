@@ -45,6 +45,8 @@ export interface Project {
   description: string
   category: Category
   icon: string // a single emoji/glyph used as the project's badge
+  // A drawn badge (a file in public/) shown instead of the emoji, for icons no emoji covers.
+  iconImage?: string
   accent: string // the project's signature color, used for glows and tints
   // Loaded on demand, so the homepage doesn't download every game.
   component: LazyExoticComponent<ComponentType>
@@ -216,7 +218,8 @@ export const projects: Project[] = [
     title: 'Graveyard Patch',
     description: 'It’s 11 PM and launch is at 6. Squash bugs, ship patches and stay awake through the night shift.',
     category: 'Arcade Chaos',
-    icon: '🦉',
+    icon: '💀',
+    iconImage: '/graveyard_patch_icon.svg',
     accent: '#2dd4bf',
     component: lazyGame(() => import('./projects/graveyard-patch/GraveyardPatch')),
     fullscreen: true,

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <!-- Graveyard Patch: a cartoon skull wearing an eye patch. -->
+  <path d="M32 5C18.5 5 9 14.5 9 27.5c0 8 3.8 13.6 9 16.6V51c0 3.3 2.7 6 6 6h16c3.3 0 6-2.7 6-6v-6.9c5.2-3 9-8.6 9-16.6C55 14.5 45.5 5 32 5z" fill="#f4eee0" stroke="#1c2130" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M15 17c3-5.5 8.5-8.5 14-9" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity="0.8"/>
+  <path d="M18 44.1c4 2.2 9 3.1 14 3.1s10-0.9 14-3.1" fill="none" stroke="#c9c1ad" stroke-width="2"/>
+  <ellipse cx="42" cy="29" rx="7" ry="7.5" fill="#1c2130"/>
+  <circle cx="42" cy="29.5" r="2.8" fill="#2dd4bf"/>
+  <circle cx="43.4" cy="27.6" r="1" fill="#fff"/>
+  <path d="M32 35.5l-3.2 5.3h6.4z" fill="#1c2130" stroke="#1c2130" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M26 47.5v9M32 47.5v9M38 47.5v9" stroke="#1c2130" stroke-width="2" stroke-linecap="round"/>
+  <path d="M8.5 35L54.5 13" stroke="#1c2130" stroke-width="3.2" stroke-linecap="round"/>
+  <ellipse cx="22.5" cy="29" rx="8.6" ry="8" fill="#1c2130"/>
+  <path d="M17.5 26.5c1.5-2 3.6-3 6-3" fill="none" stroke="#4b5563" stroke-width="1.6" stroke-linecap="round"/>
+</svg>
