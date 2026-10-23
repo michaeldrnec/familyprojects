@@ -1,0 +1,1009 @@
+/* Fills the viewport below the site header -- see `.site-main.is-fullscreen`
+ * in App.css. A dark bedroom lit by RGB strips and two monitors. */
+.graveyard-patch.fullscreen {
+  --gp-accent: #2dd4bf;
+  --gp-panel: #0d1117;
+  --gp-panel-2: #111827;
+  --gp-line: #1f2937;
+  --gp-p3: #facc15;
+  --gp-p1: #fb923c;
+  --gp-p0: #f87171;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--text);
+  background:
+    radial-gradient(ellipse 60% 40% at 15% 0%, rgba(168, 85, 247, 0.18), transparent 70%),
+    radial-gradient(ellipse 60% 40% at 85% 0%, rgba(45, 212, 191, 0.14), transparent 70%),
+    linear-gradient(#07060d, #0b0a14 60%, #120d0a);
+}
+
+.graveyard-patch kbd {
+  font: 600 0.75em var(--mono);
+  padding: 1px 5px;
+  border: 1px solid #374151;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #1f2937;
+  color: var(--text-h);
+}
+
+.graveyard-patch .gp-muted {
+  color: #8b8fa3;
+  font-size: 0.85em;
+}
+
+/* --- Buttons -------------------------------------------------------------- */
+
+.graveyard-patch button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.graveyard-patch button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.graveyard-patch .gp-primary,
+.graveyard-patch .gp-secondary {
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-weight: 700;
+  border: 2px solid var(--gp-accent);
+}
+
+.graveyard-patch .gp-primary {
+  background: var(--gp-accent);
+  color: #041312;
+  box-shadow: 0 0 18px rgba(45, 212, 191, 0.4);
+}
+
+.graveyard-patch .gp-secondary {
+  background: transparent;
+  color: var(--gp-accent);
+}
+
+.graveyard-patch .gp-btn {
+  border-radius: 7px;
+  border: 1px solid #374151;
+  background: #1f2937;
+  color: var(--text-h);
+  padding: 4px 10px;
+  font-size: 0.85rem;
+}
+
+.graveyard-patch .gp-btn:not(:disabled):hover {
+  border-color: var(--gp-accent);
+}
+
+.graveyard-patch .gp-icon-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid #374151;
+  background: #111827;
+  color: var(--text-h);
+}
+
+/* --- Menu and results ------------------------------------------------------ */
+
+.graveyard-patch .gp-menu {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.graveyard-patch h1 {
+  margin: 0;
+  color: var(--gp-accent);
+  text-shadow: 0 0 24px rgba(45, 212, 191, 0.5);
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  letter-spacing: 0.02em;
+}
+
+.graveyard-patch h2 {
+  margin: 0 0 8px;
+  color: var(--text-h);
+  font-size: 1.15rem;
+}
+
+.graveyard-patch .gp-tagline {
+  margin: 6px 0 0;
+  color: var(--text-h);
+  opacity: 0.85;
+  line-height: 1.5;
+  max-width: 640px;
+}
+
+.graveyard-patch .gp-card {
+  background: rgba(13, 17, 23, 0.9);
+  border: 1px solid var(--gp-line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.graveyard-patch .gp-week {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.graveyard-patch .gp-night {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 2px solid var(--gp-line);
+  background: var(--gp-panel);
+  color: var(--text-h);
+  text-align: left;
+}
+
+.graveyard-patch .gp-night.selected {
+  border-color: var(--gp-accent);
+  box-shadow: 0 0 14px rgba(45, 212, 191, 0.3);
+}
+
+.graveyard-patch .gp-night-day {
+  font-weight: 700;
+}
+
+.graveyard-patch .gp-night-stars {
+  font-size: 0.8rem;
+  color: var(--gp-p3);
+}
+
+.graveyard-patch .gp-briefing ul,
+.graveyard-patch .gp-help ul {
+  margin: 0 0 14px;
+  padding-left: 20px;
+  line-height: 1.55;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.graveyard-patch .gp-help summary {
+  cursor: pointer;
+  color: var(--text-h);
+  font-weight: 700;
+}
+
+.graveyard-patch .gp-help ul {
+  margin: 12px 0 0;
+}
+
+.graveyard-patch .gp-shop-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.graveyard-patch .gp-wallet {
+  color: var(--gp-p3);
+  font-weight: 700;
+}
+
+.graveyard-patch .gp-upgrades {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.graveyard-patch .gp-upgrade {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  background: var(--gp-panel-2);
+  border: 1px solid var(--gp-line);
+}
+
+.graveyard-patch .gp-upgrade.owned {
+  border-color: rgba(45, 212, 191, 0.5);
+}
+
+.graveyard-patch .gp-upgrade p {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+}
+
+.graveyard-patch .gp-upgrade-icon {
+  font-size: 1.6rem;
+}
+
+.graveyard-patch .gp-results {
+  align-items: center;
+  text-align: center;
+  justify-content: safe center;
+}
+
+.graveyard-patch .gp-result-stars {
+  color: var(--gp-p3);
+}
+
+.graveyard-patch .gp-result-stats {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px;
+  line-height: 1.8;
+  color: var(--text-h);
+}
+
+.graveyard-patch .gp-pay {
+  color: var(--gp-p3);
+  font-weight: 700;
+}
+
+.graveyard-patch .gp-result-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+/* --- The rig ---------------------------------------------------------------- */
+
+.graveyard-patch .gp-rig {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.graveyard-patch .gp-view {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px 10px;
+  transition: filter 0.6s ease-in-out;
+}
+
+.graveyard-patch .gp-shaking .gp-view {
+  animation: gp-headshake 0.25s ease-in-out;
+}
+
+@keyframes gp-headshake {
+  25% {
+    transform: translateX(-6px) rotate(-0.4deg);
+  }
+  75% {
+    transform: translateX(6px) rotate(0.4deg);
+  }
+}
+
+.graveyard-patch .gp-hud {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.graveyard-patch .gp-clock {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.graveyard-patch .gp-time {
+  font: 700 1.35rem var(--mono);
+  color: #fda4af;
+  text-shadow: 0 0 12px rgba(253, 164, 175, 0.5);
+}
+
+.graveyard-patch .gp-day {
+  font-size: 0.8rem;
+  color: #8b8fa3;
+}
+
+.graveyard-patch .gp-rating,
+.graveyard-patch .gp-sleep {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.graveyard-patch .gp-num {
+  font: 600 0.85rem var(--mono);
+  color: var(--text-h);
+  min-width: 3ch;
+}
+
+.graveyard-patch .gp-stars {
+  position: relative;
+  display: inline-block;
+  font-size: 1.05rem;
+  letter-spacing: 1px;
+  line-height: 1;
+}
+
+.graveyard-patch .gp-stars-empty {
+  color: #374151;
+}
+
+.graveyard-patch .gp-stars-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--gp-p3);
+}
+
+.graveyard-patch .gp-meter {
+  width: clamp(80px, 16vw, 160px);
+  height: 10px;
+  border-radius: 5px;
+  background: #1f2937;
+  overflow: hidden;
+}
+
+.graveyard-patch .gp-meter-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #4ade80, #facc15 60%, #f87171);
+  background-size: clamp(80px, 16vw, 160px) 100%;
+  transition: width 0.1s linear;
+}
+
+.graveyard-patch .gp-meter-fill.danger {
+  box-shadow: 0 0 10px #f87171;
+}
+
+.graveyard-patch .gp-status {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.graveyard-patch .gp-pill {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #1f2937;
+  color: var(--text-h);
+  white-space: nowrap;
+}
+
+.graveyard-patch .gp-pill.jitter {
+  background: rgba(250, 204, 21, 0.2);
+}
+
+.graveyard-patch .gp-pill.bad {
+  background: rgba(248, 113, 113, 0.22);
+}
+
+.graveyard-patch .gp-hud-buttons {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.graveyard-patch .gp-screens {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) minmax(0, 2.6fr);
+  gap: 12px;
+}
+
+.graveyard-patch .gp-monitor {
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--gp-panel);
+  border: 2px solid var(--gp-line);
+  border-radius: 10px;
+  box-shadow: 0 0 26px rgba(45, 212, 191, 0.1);
+}
+
+.graveyard-patch .gp-monitor-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--gp-line);
+}
+
+.graveyard-patch .gp-brand {
+  font: 700 0.85rem var(--mono);
+  color: var(--gp-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.graveyard-patch .gp-quiet {
+  padding: 12px;
+  list-style: none;
+}
+
+/* Chirp feed */
+.graveyard-patch .gp-posts {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.graveyard-patch .gp-post {
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--gp-line);
+  border-left: 3px solid transparent;
+  font-size: 0.85rem;
+}
+
+.graveyard-patch .gp-post p {
+  margin: 2px 0 0;
+  color: var(--text-h);
+  overflow-wrap: anywhere;
+}
+
+.graveyard-patch .gp-post-head {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graveyard-patch .gp-avatar {
+  font-size: 1.2rem;
+}
+
+.graveyard-patch .tone-P3 {
+  border-left-color: var(--gp-p3);
+}
+.graveyard-patch .tone-P1 {
+  border-left-color: var(--gp-p1);
+}
+.graveyard-patch .tone-P0,
+.graveyard-patch .tone-bad {
+  border-left-color: var(--gp-p0);
+}
+.graveyard-patch .tone-good {
+  border-left-color: #4ade80;
+}
+.graveyard-patch .tone-team {
+  border-left-color: #60a5fa;
+}
+.graveyard-patch .tone-stream {
+  border-left-color: #c084fc;
+}
+
+/* IDE */
+.graveyard-patch .gp-ide {
+  display: grid;
+  grid-template-columns: minmax(240px, 340px) minmax(0, 1fr);
+}
+
+.graveyard-patch .gp-ide.p0 {
+  animation: gp-p0 1.6s ease-in-out infinite;
+}
+
+.graveyard-patch .gp-ide.p0-still {
+  border-color: var(--gp-p0);
+}
+
+@keyframes gp-p0 {
+  0%,
+  100% {
+    border-color: #7f1d1d;
+    box-shadow: 0 0 0 rgba(248, 113, 113, 0);
+  }
+  50% {
+    border-color: var(--gp-p0);
+    box-shadow: 0 0 26px rgba(248, 113, 113, 0.5);
+  }
+}
+
+.graveyard-patch .gp-queue {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--gp-line);
+}
+
+.graveyard-patch .gp-tickets {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+}
+
+.graveyard-patch .gp-ticket {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'sev title actions'
+    'sev meta actions';
+  align-items: center;
+  gap: 2px 8px;
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  border-radius: 8px;
+  background: var(--gp-panel-2);
+  border-left: 4px solid var(--sev);
+}
+
+.graveyard-patch .gp-ticket.active {
+  outline: 2px solid var(--gp-accent);
+}
+
+.graveyard-patch .sev-P3 {
+  --sev: var(--gp-p3);
+}
+.graveyard-patch .sev-P1 {
+  --sev: var(--gp-p1);
+}
+.graveyard-patch .sev-P0 {
+  --sev: var(--gp-p0);
+}
+
+.graveyard-patch .gp-sev {
+  grid-area: sev;
+  font: 700 0.75rem var(--mono);
+  color: #0b1020;
+  background: var(--sev);
+  border-radius: 5px;
+  padding: 2px 5px;
+}
+
+.graveyard-patch .gp-ticket-title {
+  grid-area: title;
+  font-size: 0.85rem;
+  color: var(--text-h);
+  line-height: 1.25;
+}
+
+.graveyard-patch .gp-ticket-meta {
+  grid-area: meta;
+  font-size: 0.75rem;
+  color: #8b8fa3;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.graveyard-patch .gp-ticket-actions {
+  grid-area: actions;
+  display: flex;
+  gap: 4px;
+}
+
+.graveyard-patch .gp-fix {
+  border-color: var(--gp-accent);
+}
+
+.graveyard-patch .gp-ship {
+  padding: 8px;
+  border-top: 1px solid var(--gp-line);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.graveyard-patch .gp-staged {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-height: 22px;
+}
+
+.graveyard-patch .gp-chip {
+  font: 700 0.7rem var(--mono);
+  padding: 2px 6px;
+  border-radius: 5px;
+  background: var(--sev);
+  color: #0b1020;
+}
+
+.graveyard-patch .gp-deploy {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9px;
+  border: 2px solid #4ade80;
+  background: rgba(74, 222, 128, 0.12);
+  color: var(--text-h);
+  font-weight: 700;
+  padding: 9px;
+}
+
+.graveyard-patch .gp-deploy.running {
+  opacity: 1;
+  border-color: #38bdf8;
+}
+
+.graveyard-patch .gp-deploy.halted {
+  border-color: var(--gp-p0);
+}
+
+.graveyard-patch .gp-deploy-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: rgba(56, 189, 248, 0.3);
+}
+
+.graveyard-patch .gp-deploy-label {
+  position: relative;
+}
+
+.graveyard-patch .gp-warn {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--gp-p1);
+}
+
+.graveyard-patch .gp-bench {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.graveyard-patch .gp-bench-idle {
+  justify-content: center;
+  padding: 20px;
+  color: #8b8fa3;
+  font-size: 0.9rem;
+}
+
+.graveyard-patch .gp-bench-idle p {
+  margin: 4px 0;
+}
+
+.graveyard-patch .gp-bench-title {
+  font: 600 1rem var(--mono);
+  color: #6b7280;
+}
+
+.graveyard-patch .gp-bench-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--gp-line);
+}
+
+.graveyard-patch .gp-bench-name {
+  flex: 1;
+  color: var(--text-h);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.graveyard-patch .gp-bench-play {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.graveyard-patch .gp-minigame-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  user-select: none;
+}
+
+/* Desk */
+.graveyard-patch .gp-desk {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: linear-gradient(#3b2a1e, #2a1d14);
+  border-top: 2px solid #5b4330;
+  box-shadow: 0 -4px 20px rgba(168, 85, 247, 0.15);
+}
+
+.graveyard-patch .gp-desk-btn {
+  border-radius: 9px;
+  border: 1px solid #6b5140;
+  color: var(--text-h);
+  padding: 7px 12px;
+  background: linear-gradient(90deg, rgba(45, 212, 191, 0.22) var(--fill, 100%), rgba(0, 0, 0, 0.3) var(--fill, 100%));
+}
+
+.graveyard-patch .gp-shake-btn {
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.graveyard-patch .gp-shake-btn.urgent {
+  border-color: var(--gp-p0);
+  box-shadow: 0 0 14px rgba(248, 113, 113, 0.5);
+}
+
+.graveyard-patch .gp-cat {
+  position: absolute;
+  bottom: calc(100% - 8px);
+  border: none;
+  background: none;
+  font-size: 2rem;
+  line-height: 1;
+  padding: 0;
+  transform: scaleX(-1);
+  z-index: 2;
+}
+
+.graveyard-patch .gp-cat.sitting {
+  position: static;
+  transform: none;
+  font-size: 1.3rem;
+  padding: 4px 10px;
+  border-radius: 9px;
+  border: 1px dashed var(--gp-p3);
+  color: var(--text-h);
+}
+
+.graveyard-patch .gp-cat.sitting span {
+  font-size: 0.85rem;
+}
+
+/* --- Being tired ------------------------------------------------------------ */
+
+.graveyard-patch .gp-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.92) 100%);
+}
+
+.graveyard-patch .gp-lid {
+  position: absolute;
+  left: -5%;
+  right: -5%;
+  pointer-events: none;
+  background: #000;
+  transition: height 0.2s ease-out;
+}
+
+.graveyard-patch .gp-lid.top {
+  top: 0;
+  border-radius: 0 0 50% 50% / 0 0 40% 40%;
+}
+
+.graveyard-patch .gp-lid.bottom {
+  bottom: 0;
+  border-radius: 50% 50% 0 0 / 40% 40% 0 0;
+}
+
+.graveyard-patch .gp-doze {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-h);
+  font-weight: 700;
+  touch-action: manipulation;
+}
+
+.graveyard-patch .gp-zzz {
+  font-size: 2.6rem;
+  color: #a5b4fc;
+  text-shadow: 0 0 18px rgba(165, 180, 252, 0.7);
+}
+
+.graveyard-patch .gp-away {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 47, 73, 0.88);
+  color: var(--text-h);
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+/* Over the Chirp feed, where the news would land anyway, clear of the tickets. */
+.graveyard-patch .gp-banner {
+  position: absolute;
+  top: 56px;
+  left: 16px;
+  width: min(380px, calc(28% - 8px));
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #1f1135;
+  border: 2px solid #f472b6;
+  color: var(--text-h);
+  box-shadow: 0 0 30px rgba(244, 114, 182, 0.35);
+  pointer-events: none;
+}
+
+.graveyard-patch .gp-banner strong {
+  color: #f9a8d4;
+  font-size: 1.1rem;
+}
+
+.graveyard-patch .gp-toast {
+  position: absolute;
+  bottom: 74px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100% - 32px);
+  z-index: 3;
+  padding: 8px 14px;
+  border-radius: 10px;
+  background: #111827;
+  border: 1px solid #374151;
+  color: var(--text-h);
+  font-size: 0.9rem;
+  pointer-events: none;
+}
+
+.graveyard-patch .gp-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  overflow-y: auto;
+  gap: 14px;
+  padding: 24px 16px;
+  text-align: center;
+  background: rgba(5, 4, 12, 0.88);
+}
+
+/* --- Phones, tablets, short screens ----------------------------------------- */
+
+@media (hover: none) {
+  .graveyard-patch .gp-keyhint {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .graveyard-patch .gp-ide {
+    grid-template-columns: minmax(200px, 1fr) minmax(0, 1.4fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .graveyard-patch .gp-view {
+    padding: 6px 8px 8px;
+    gap: 6px;
+  }
+
+  .graveyard-patch .gp-keyhint {
+    display: none;
+  }
+
+  .graveyard-patch .gp-hud {
+    gap: 4px 10px;
+  }
+
+  .graveyard-patch .gp-time {
+    font-size: 1.1rem;
+  }
+
+  .graveyard-patch .gp-screens {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  /* The feed shrinks to a one-post ticker. */
+  .graveyard-patch .gp-feed .gp-monitor-head {
+    display: none;
+  }
+
+  .graveyard-patch .gp-feed .gp-post:not(:first-child) {
+    display: none;
+  }
+
+  .graveyard-patch .gp-feed .gp-post {
+    border-bottom: none;
+    padding: 5px 8px;
+  }
+
+  .graveyard-patch .gp-feed .gp-post p {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .graveyard-patch .gp-ide {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(190px, 1.1fr) minmax(150px, 1fr);
+  }
+
+  .graveyard-patch .gp-bench {
+    order: -1;
+    border-bottom: 1px solid var(--gp-line);
+  }
+
+  /* No ticket open: a one-line hint, so the queue gets the room. */
+  .graveyard-patch .gp-ide:has(.gp-bench-idle) {
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .graveyard-patch .gp-bench-idle {
+    padding: 8px 12px;
+  }
+
+  .graveyard-patch .gp-bench-idle p:not(:nth-child(2)) {
+    display: none;
+  }
+
+  .graveyard-patch .gp-queue {
+    border-right: none;
+  }
+
+  .graveyard-patch .gp-desk {
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .graveyard-patch .gp-banner {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
+
+  .graveyard-patch .gp-desk-btn {
+    flex: 1;
+    padding: 9px 6px;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-height: 520px) and (min-width: 761px) {
+  .graveyard-patch .gp-screens {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .graveyard-patch .gp-banner {
+    left: auto;
+    right: 16px;
+    width: min(380px, 40%);
+  }
+
+  .graveyard-patch .gp-feed {
+    display: none;
+  }
+}

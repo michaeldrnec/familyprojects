@@ -36,7 +36,7 @@ function lazyGame(load: () => Promise<{ default: ComponentType }>): LazyExoticCo
   )
 }
 
-export const CATEGORIES = ['Words & Learning', 'Puzzles', 'Space Arcade', 'Physics Mayhem'] as const
+export const CATEGORIES = ['Words & Learning', 'Puzzles', 'Space Arcade', 'Physics Mayhem', 'Arcade Chaos'] as const
 export type Category = (typeof CATEGORIES)[number]
 
 export interface Project {
@@ -209,6 +209,16 @@ export const projects: Project[] = [
     icon: '🪐',
     accent: '#818cf8',
     component: lazyGame(() => import('./projects/orbital-siege/OrbitalSiege')),
+    fullscreen: true,
+  },
+  {
+    slug: 'graveyard-patch',
+    title: 'Graveyard Patch',
+    description: 'It’s 11 PM and launch is at 6. Squash bugs, ship patches and stay awake through the night shift.',
+    category: 'Arcade Chaos',
+    icon: '🦉',
+    accent: '#2dd4bf',
+    component: lazyGame(() => import('./projects/graveyard-patch/GraveyardPatch')),
     fullscreen: true,
   },
 ]

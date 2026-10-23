@@ -30,6 +30,15 @@ is implemented.
 
 If a change doesn't clearly fit one of these, ask the user before bumping.
 
+## Git: never commit or push
+
+Never run `git commit` or `git push` (or anything else that creates commits or updates a remote,
+such as `git merge`, `git rebase`, `git tag` or `gh pr create`), even when it looks like the obvious
+next step. The user commits and pushes everything themselves. Leave changes in the working tree.
+
+When reporting a change, list any **new files** the change added, since they need a `git add`
+before committing. A missed new file once broke the Vercel build.
+
 ## Checks before reporting a change
 
 Run `npm run lint`, `npm test` and `npm run build`; for anything that touches a page's layout,

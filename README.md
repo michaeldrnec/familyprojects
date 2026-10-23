@@ -63,6 +63,14 @@ Grouped the way the homepage's filter groups them.
 - **Feline Ballistics** (`/feline-ballistics`): a 3 AM physics puzzler. Fling soft-body cats to
   knock precious things off shelves across 20 levels in 4 rooms. Uses Matter.js.
 
+### Arcade Chaos
+
+- **Graveyard Patch** (`/graveyard-patch`): the night shift before a game launch, 11 PM to 6 AM.
+  Fix incoming bugs by squashing crawling bugs or untangling wires (or roll the dice on a Quick
+  Patch), deploy the patches to win your star rating back, and fight off sleep with coffee, cold
+  water and a desk cat.
+  Five nights, Monday to Friday, each adding a new hazard, with upgrades bought from Overtime Pay.
+
 ## Development
 
 ```bash
