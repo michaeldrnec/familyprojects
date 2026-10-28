@@ -61,7 +61,8 @@ Every new game (and every major rework of one) should tick all of these:
    `familySafe.ts`, and `shared/ui/` (banner, win banner, results card, confetti).
 3. **Phones and tablets**: playable by touch, not only keyboard; check it at phone width.
 4. **Sharp canvas**: use `useCanvasLoop` or `useHiDpiCanvas` + `scaledContext`, never a bare
-   fixed-size canvas stretched by CSS.
+   fixed-size canvas stretched by CSS. A WebGL (three.js) game sets the renderer's pixel ratio
+   (capped at 2) and sizes it from its parent element, like Haunt & Seek's `useThreeView`.
 5. **Pause when hidden**: real-time games pause (with a visible pause screen) when the player
    leaves, via `usePauseOnHide`, and offer a pause button and key.
 6. **Saves and bests** go through `createStore()` (per profile, versioned), with a `summary` so

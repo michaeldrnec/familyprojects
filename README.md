@@ -70,6 +70,11 @@ Grouped the way the homepage's filter groups them.
   Patch), deploy the patches to win your star rating back, and fight off sleep with coffee, cold
   water and a desk cat.
   Five nights, Monday to Friday, each adding a new hazard, with upgrades bought from Overtime Pay.
+- **Haunt & Seek** (`/haunt-and-seek`): a 3D maze chase with the roles reversed. Fly a squad of
+  four ghosts and scare Snaxley the raccoon out of Hollowmere Manor before he eats every sweet.
+  Swoop, hide in walls, slime the halls and wail him into ambushes, and run when he gobbles a
+  Sugar Rush gumball. Six manors, three difficulties, overhead, over-the-shoulder or first-person
+  camera, and keyboard, gamepad or touch controls. Uses three.js.
 
 ## Development
 

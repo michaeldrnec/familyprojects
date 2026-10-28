@@ -84,6 +84,7 @@ const pausing = [
   { slug: 'solar-ward', start: 'Launch' },
   { slug: 'xenofuse', start: 'Start Defusal' },
   { slug: 'graveyard-patch', start: 'Clock in' },
+  { slug: 'haunt-and-seek', start: 'Start haunting' },
 ]
 for (const g of pausing) {
   test(`${g.slug} pauses when the player leaves`, async ({ page }) => {

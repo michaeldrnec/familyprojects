@@ -224,6 +224,16 @@ export const projects: Project[] = [
     component: lazyGame(() => import('./projects/graveyard-patch/GraveyardPatch')),
     fullscreen: true,
   },
+  {
+    slug: 'haunt-and-seek',
+    title: 'Haunt & Seek',
+    description: 'Four ghosts, one candy-gobbling raccoon. Scare him out of the manor before he eats every last sweet.',
+    category: 'Arcade Chaos',
+    icon: '👻',
+    accent: '#d8b4fe',
+    component: lazyGame(() => import('./projects/haunt-and-seek/HauntAndSeek')),
+    fullscreen: true,
+  },
 ]
 
 export function projectBySlug(slug: string): Project | undefined {

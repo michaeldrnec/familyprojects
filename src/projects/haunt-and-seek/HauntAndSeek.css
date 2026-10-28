@@ -1,0 +1,777 @@
+/* Fills the viewport below the site header -- see `.site-main.is-fullscreen`
+ * in App.css. Hollowmere Manor at night: deep purples, lantern gold, and a
+ * color for each ghost. */
+.haunt-and-seek.fullscreen {
+  --hs-accent: #d8b4fe;
+  --hs-panel: rgba(18, 12, 30, 0.86);
+  --hs-line: #3b2d55;
+  --hs-fear: #c084fc;
+  --hs-hunger: #fb923c;
+  --hs-ecto: #6ee7b7;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  color: var(--text);
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(168, 85, 247, 0.2), transparent 70%),
+    linear-gradient(#0b0716, #120a1f 60%, #0b0716);
+}
+
+.haunt-and-seek kbd {
+  font: 600 0.75em var(--mono);
+  padding: 1px 5px;
+  border: 1px solid #4c3d6b;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #241a38;
+  color: var(--text-h);
+}
+
+.haunt-and-seek .hs-muted {
+  color: #9d93b3;
+  font-size: 0.85em;
+}
+
+.haunt-and-seek button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.haunt-and-seek button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.haunt-and-seek .hs-primary,
+.haunt-and-seek .hs-secondary {
+  border-radius: 10px;
+  padding: 10px 22px;
+  font-weight: 700;
+  border: 2px solid var(--hs-accent);
+}
+
+.haunt-and-seek .hs-primary {
+  background: var(--hs-accent);
+  color: #1e1033;
+  box-shadow: 0 0 20px rgba(216, 180, 254, 0.45);
+}
+
+.haunt-and-seek .hs-secondary {
+  background: transparent;
+  color: var(--hs-accent);
+}
+
+/* --- Menu ------------------------------------------------------------------ */
+
+.haunt-and-seek .hs-menu {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.haunt-and-seek h1 {
+  margin: 0;
+  color: var(--hs-accent);
+  text-shadow: 0 0 24px rgba(216, 180, 254, 0.55);
+  font-size: clamp(1.8rem, 6vw, 2.6rem);
+  letter-spacing: 0.02em;
+}
+
+.haunt-and-seek h2 {
+  margin: 0 0 8px;
+  color: var(--text-h);
+  font-size: 1.15rem;
+}
+
+.haunt-and-seek h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.haunt-and-seek .hs-tagline {
+  margin: 6px 0 0;
+  color: var(--text-h);
+  opacity: 0.85;
+  line-height: 1.5;
+  max-width: 640px;
+}
+
+.haunt-and-seek .hs-card {
+  background: var(--hs-panel);
+  border: 1px solid var(--hs-line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.haunt-and-seek .hs-card ul {
+  margin: 0 0 10px;
+  padding-left: 20px;
+  line-height: 1.5;
+}
+
+.haunt-and-seek .hs-manors {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+}
+
+.haunt-and-seek .hs-manor {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--hs-line);
+  background: var(--hs-panel);
+  color: var(--text-h);
+  text-align: left;
+}
+
+.haunt-and-seek .hs-manor.selected {
+  border-color: var(--hs-accent);
+  box-shadow: 0 0 14px rgba(216, 180, 254, 0.3);
+}
+
+.haunt-and-seek .hs-manor-name {
+  font-weight: 700;
+}
+
+.haunt-and-seek .hs-manor-stars {
+  color: #fcd34d;
+  font-size: 0.85rem;
+}
+
+.haunt-and-seek .hs-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0 4px;
+}
+
+.haunt-and-seek .hs-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.haunt-and-seek .hs-choice legend {
+  width: 100%;
+  margin-bottom: 4px;
+  font-size: 0.8rem;
+  color: #9d93b3;
+}
+
+.haunt-and-seek .hs-choice button {
+  border-radius: 999px;
+  padding: 6px 12px;
+  border: 1px solid var(--hs-line);
+  background: #1a1229;
+  color: var(--text-h);
+  font-size: 0.9rem;
+}
+
+.haunt-and-seek .hs-choice button.selected {
+  border-color: var(--hs-accent);
+  background: rgba(216, 180, 254, 0.18);
+}
+
+.haunt-and-seek .hs-fov {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.haunt-and-seek .hs-briefing .hs-primary {
+  margin-top: 10px;
+  font-size: 1.1rem;
+}
+
+.haunt-and-seek .hs-fear {
+  color: var(--hs-fear);
+  font-weight: 700;
+}
+
+.haunt-and-seek .hs-hunger {
+  color: var(--hs-hunger);
+  font-weight: 700;
+}
+
+.haunt-and-seek .hs-ecto {
+  color: var(--hs-ecto);
+  font-weight: 700;
+}
+
+.haunt-and-seek .hs-roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.haunt-and-seek .hs-ghost-card {
+  border: 1px solid var(--hs-line);
+  border-left-width: 4px;
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(10, 6, 18, 0.6);
+  font-size: 0.9rem;
+}
+
+.haunt-and-seek .hs-defense-card {
+  border-color: #f472b6;
+}
+
+/* --- Play ------------------------------------------------------------------ */
+
+.haunt-and-seek .hs-stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.haunt-and-seek .hs-hud {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.haunt-and-seek .hs-hud button {
+  pointer-events: auto;
+}
+
+.haunt-and-seek .hs-hud-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+}
+
+.haunt-and-seek .hs-meters {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(240px, 38vw);
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--hs-panel);
+  border: 1px solid var(--hs-line);
+}
+
+.haunt-and-seek .hs-meter {
+  display: grid;
+  grid-template-columns: 52px 1fr 36px;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-h);
+}
+
+.haunt-and-seek .hs-meter-track {
+  position: relative;
+  height: 10px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.haunt-and-seek .hs-meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 5px;
+  transition: width 0.15s linear;
+}
+
+.haunt-and-seek .hs-meter-mark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.haunt-and-seek .hs-meter-fear .hs-meter-fill {
+  background: linear-gradient(90deg, #7c3aed, var(--hs-fear));
+}
+
+.haunt-and-seek .hs-meter-hunger .hs-meter-fill {
+  background: linear-gradient(90deg, #ea580c, var(--hs-hunger));
+}
+
+.haunt-and-seek .hs-meter-ecto .hs-meter-fill {
+  background: linear-gradient(90deg, #059669, var(--hs-ecto));
+}
+
+.haunt-and-seek .hs-meter-value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.haunt-and-seek .hs-portraits {
+  display: flex;
+  gap: 6px;
+}
+
+.haunt-and-seek .hs-portrait {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 58px;
+  padding: 5px 6px;
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background: var(--hs-panel);
+  color: var(--ghost);
+  font-size: 0.75rem;
+  font-weight: 700;
+  touch-action: manipulation;
+}
+
+.haunt-and-seek .hs-portrait.is-active {
+  border-color: var(--ghost);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--ghost) 60%, transparent);
+}
+
+.haunt-and-seek .hs-portrait.is-bonked {
+  opacity: 0.55;
+}
+
+.haunt-and-seek .hs-portrait-face {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.haunt-and-seek .hs-portrait kbd {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 0.6rem;
+  padding: 0 3px;
+}
+
+.haunt-and-seek .hs-portrait-ult {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fcd34d;
+  box-shadow: 0 0 6px #fcd34d;
+}
+
+.haunt-and-seek .hs-hud-corner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.haunt-and-seek .hs-hud-buttons {
+  display: flex;
+  gap: 6px;
+}
+
+.haunt-and-seek .hs-icon-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--hs-line);
+  background: var(--hs-panel);
+  color: var(--text-h);
+  font-size: 1.1rem;
+}
+
+.haunt-and-seek .hs-minimap {
+  display: block;
+  border-radius: 8px;
+  border: 1px solid var(--hs-line);
+  background: rgba(10, 6, 18, 0.8);
+  transform-origin: top right;
+}
+
+.haunt-and-seek .hs-rush {
+  position: absolute;
+  left: 50%;
+  top: 78px;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border-radius: 10px;
+  background: rgba(80, 7, 60, 0.85);
+  border: 1px solid #f472b6;
+  color: #fbcfe8;
+  font-weight: 800;
+}
+
+.haunt-and-seek .hs-rush-bar {
+  width: 160px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+}
+
+.haunt-and-seek .hs-rush-bar span {
+  display: block;
+  height: 100%;
+  background: #f472b6;
+}
+
+.haunt-and-seek .hs-banner {
+  position: absolute;
+  left: 50%;
+  top: 26%;
+  transform: translateX(-50%);
+  padding: 8px 18px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: clamp(1.1rem, 3.5vw, 1.6rem);
+  white-space: nowrap;
+  background: var(--hs-panel);
+  border: 2px solid var(--hs-accent);
+  color: var(--text-h);
+  animation: hs-pop 0.35s ease-out;
+}
+
+.haunt-and-seek .hs-banner-combo {
+  border-color: #fcd34d;
+  color: #fde68a;
+}
+
+.haunt-and-seek .hs-banner-rush {
+  border-color: #f472b6;
+  color: #fbcfe8;
+}
+
+.haunt-and-seek .hs-banner-flee {
+  border-color: #6ee7b7;
+  color: #a7f3d0;
+}
+
+.haunt-and-seek .hs-bubble {
+  position: absolute;
+  left: 0;
+  top: 0;
+  max-width: 200px;
+  padding: 5px 10px;
+  border-radius: 12px;
+  background: #fff;
+  color: #1e1033;
+  font-weight: 700;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.2s;
+  pointer-events: none;
+}
+
+.haunt-and-seek .hs-bubble::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -6px;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-bottom: 0;
+  border-top-color: #fff;
+}
+
+.haunt-and-seek .hs-boo {
+  position: absolute;
+  transform: translate(-50%, -100%);
+  font-weight: 900;
+  font-size: 1.7rem;
+  color: #fde047;
+  text-shadow:
+    0 2px 0 #7c2d12,
+    0 0 12px rgba(253, 224, 71, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+
+.haunt-and-seek .hs-boo.pop {
+  animation: hs-boo 0.5s ease-out;
+}
+
+@keyframes hs-pop {
+  from {
+    transform: translateX(-50%) scale(0.7);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes hs-boo {
+  0% {
+    transform: translate(-50%, -100%) scale(0.5);
+  }
+  60% {
+    transform: translate(-50%, -110%) scale(1.25);
+  }
+  100% {
+    transform: translate(-50%, -100%) scale(1);
+  }
+}
+
+.haunt-and-seek .hs-abilities {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.haunt-and-seek .hs-ability {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 92px;
+  height: 84px;
+  padding: 6px 4px;
+  border-radius: 14px;
+  border: 2px solid var(--hs-line);
+  background: var(--hs-panel);
+  color: var(--text-h);
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+.haunt-and-seek .hs-ability.is-ult {
+  border-color: #fcd34d;
+}
+
+.haunt-and-seek .hs-ability.is-defense {
+  border-color: #f472b6;
+}
+
+.haunt-and-seek .hs-ability.is-off {
+  opacity: 0.5;
+}
+
+.haunt-and-seek .hs-ability-locked {
+  opacity: 0.35;
+}
+
+.haunt-and-seek .hs-ability-cd {
+  position: absolute;
+  inset: 0;
+}
+
+.haunt-and-seek .hs-ability-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.haunt-and-seek .hs-ability-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.1;
+}
+
+.haunt-and-seek .hs-ability-cost {
+  font-size: 0.62rem;
+  color: #b8acd1;
+}
+
+.haunt-and-seek .hs-ability-cost kbd {
+  font-size: 0.6rem;
+  padding: 0 3px;
+}
+
+.haunt-and-seek .hs-keyhint {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  max-width: calc(100% - 330px);
+  margin: 0;
+  padding: 5px 10px;
+  border-radius: 8px;
+  background: var(--hs-panel);
+  font-size: 0.75rem;
+  color: #b8acd1;
+}
+
+/* Touch: the thumb stick sits under the HUD; dragging elsewhere looks. */
+.haunt-and-seek .hs-look-zone {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  touch-action: none;
+}
+
+.haunt-and-seek .hs-stick-zone {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 50%;
+  height: 55%;
+  z-index: 2;
+  touch-action: none;
+}
+
+.haunt-and-seek .hs-stick {
+  position: absolute;
+  width: 110px;
+  height: 110px;
+  margin: -55px 0 0 -55px;
+  border-radius: 50%;
+  border: 2px solid rgba(216, 180, 254, 0.45);
+  background: rgba(18, 12, 30, 0.35);
+}
+
+.haunt-and-seek .hs-stick-idle {
+  left: 86px;
+  top: auto;
+  bottom: 30px;
+  margin: 0 0 0 -55px;
+  opacity: 0.6;
+}
+
+.haunt-and-seek .hs-stick-knob {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 48px;
+  margin: -24px 0 0 -24px;
+  border-radius: 50%;
+  background: rgba(216, 180, 254, 0.55);
+}
+
+/* --- Overlays ---------------------------------------------------------------- */
+
+.haunt-and-seek .hs-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  overflow-y: auto;
+  gap: 14px;
+  padding: 24px 16px;
+  text-align: center;
+  background: rgba(8, 4, 16, 0.82);
+}
+
+.haunt-and-seek .hs-stats {
+  list-style: none;
+  margin: 8px 0 14px;
+  padding: 0;
+  line-height: 1.7;
+  color: var(--text-h);
+}
+
+.haunt-and-seek .hs-result-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* --- Phones, tablets, short screens ----------------------------------------- */
+
+@media (max-width: 720px) {
+  .haunt-and-seek .hs-hud-top {
+    flex-wrap: wrap;
+    padding: 8px;
+    gap: 6px;
+  }
+
+  .haunt-and-seek .hs-meters {
+    order: 1;
+    width: min(200px, 46vw);
+    padding: 6px 8px;
+  }
+
+  .haunt-and-seek .hs-hud-corner {
+    order: 2;
+  }
+
+  .haunt-and-seek .hs-portraits {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+  }
+
+  .haunt-and-seek .hs-portrait {
+    min-width: 50px;
+    padding: 3px 4px;
+  }
+
+  .haunt-and-seek .hs-portrait-name {
+    font-size: 0.65rem;
+  }
+
+  .haunt-and-seek .hs-minimap {
+    transform: scale(0.7);
+    margin-bottom: -30%;
+  }
+
+  .haunt-and-seek .hs-rush {
+    top: auto;
+    bottom: 110px;
+  }
+
+  .haunt-and-seek .hs-ability {
+    width: 74px;
+    height: 74px;
+  }
+
+  .haunt-and-seek .hs-ability-cost {
+    display: none;
+  }
+
+  .haunt-and-seek .hs-keyhint {
+    display: none;
+  }
+}
+
+@media (hover: none) {
+  .haunt-and-seek .hs-keyhint {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .haunt-and-seek .hs-banner,
+  .haunt-and-seek .hs-boo.pop {
+    animation: none;
+  }
+
+  .haunt-and-seek .hs-meter-fill {
+    transition: none;
+  }
+}
