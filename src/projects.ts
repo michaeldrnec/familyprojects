@@ -234,6 +234,16 @@ export const projects: Project[] = [
     component: lazyGame(() => import('./projects/haunt-and-seek/HauntAndSeek')),
     fullscreen: true,
   },
+  {
+    slug: 'ten-centimeters',
+    title: '10 Centimeters',
+    description: 'Run the Labor & Delivery night shift: four bays, one OR, one doctor. Catch every baby before 7 AM.',
+    category: 'Arcade Chaos',
+    icon: '👶',
+    accent: '#f472b6',
+    component: lazyGame(() => import('./projects/ten-centimeters/TenCentimeters')),
+    fullscreen: true,
+  },
 ]
 
 export function projectBySlug(slug: string): Project | undefined {

@@ -75,6 +75,12 @@ Grouped the way the homepage's filter groups them.
   Swoop, hide in walls, slime the halls and wail him into ambushes, and run when he gobbles a
   Sugar Rush gumball. Six manors, three difficulties, overhead, over-the-shoulder or first-person
   camera, and keyboard, gamepad or touch controls. Uses three.js.
+- **10 Centimeters** (`/ten-centimeters`): run the Labor & Delivery night shift, 7 PM to 7 AM. Walk
+  a doctor between four bays, Supply, the scrub sink and the OR; watch the live heart rate strips;
+  carry two supplies at a time to manage stalled labor, fetal distress and preeclampsia; and call a
+  Code Stork for an emergency C-section. Deliveries are a timed push meter, and a Code Stork is a
+  five-step cartoon surgery (incision, suction, lift the baby out, clamp and cut, stitch). Five
+  shifts, each adding a new complication, unlock in turn.
 
 ## Development
 

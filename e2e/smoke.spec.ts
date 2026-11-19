@@ -85,6 +85,7 @@ const pausing = [
   { slug: 'xenofuse', start: 'Start Defusal' },
   { slug: 'graveyard-patch', start: 'Clock in' },
   { slug: 'haunt-and-seek', start: 'Start haunting' },
+  { slug: 'ten-centimeters', start: 'Start shift' },
 ]
 for (const g of pausing) {
   test(`${g.slug} pauses when the player leaves`, async ({ page }) => {
